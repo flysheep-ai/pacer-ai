@@ -34,8 +34,11 @@ def test_send_message_persists_and_returns_reply(client_and_token):
             input_tokens=10, output_tokens=5, raw=None,
         )
 
-    fake_resp = _rsp("Hi Alice!")
-    with patch("pacer.api.routes.message.LLMClient.chat", new=AsyncMock(return_value=fake_resp)):
+    replies = [
+        _rsp('{"intent":"chitchat","subject":null,"confidence":0.8}'),  # router
+        _rsp("Hi Alice!"),  # agent
+    ]
+    with patch("pacer.llm.client.LLMClient.chat", new=AsyncMock(side_effect=replies)):
         resp = client.post(
             "/message/send", json={"text": "Hello"},
             headers={"Authorization": f"Bearer {token}"},

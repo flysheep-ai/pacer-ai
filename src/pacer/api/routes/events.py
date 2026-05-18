@@ -1,9 +1,9 @@
 from __future__ import annotations
 import asyncio
 import json
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sse_starlette.sse import EventSourceResponse
-from pacer.api.deps import current_student_id
+from pacer.api.deps import optional_student_id
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -11,7 +11,8 @@ router = APIRouter(prefix="/events", tags=["events"])
 @router.get("/stream")
 async def stream_events(
     request: Request,
-    student_id: int = Depends(current_student_id),
+    token: str | None = Query(None),
+    student_id: int = Depends(optional_student_id),
 ):
     bus = request.app.state.event_bus
     queue = bus.subscribe(student_id)

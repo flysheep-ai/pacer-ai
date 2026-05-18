@@ -35,10 +35,12 @@ def client_token(tmp_path):
 def test_two_turn_conversation_persists(client_token):
     client, token = client_token
     replies = [
-        _rsp("你好，ZeroDay！"),
-        _rsp("你之前说过你想冲清华。"),
+        _rsp('{"intent":"chitchat","subject":null,"confidence":0.8}'),  # router turn 1
+        _rsp("你好，ZeroDay！"),  # homeroom turn 1
+        _rsp('{"intent":"chitchat","subject":null,"confidence":0.6}'),  # router turn 2
+        _rsp("你之前说过你想冲清华。"),  # homeroom turn 2
     ]
-    with patch("pacer.api.routes.message.LLMClient.chat",
+    with patch("pacer.llm.client.LLMClient.chat",
                new=AsyncMock(side_effect=replies)):
         r1 = client.post(
             "/message/send", json={"text": "你好"},

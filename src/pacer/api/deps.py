@@ -41,9 +41,26 @@ def issue_token(student_id: int) -> str:
 
 
 def current_student_id(authorization: str | None = Header(None)) -> int:
-    if not authorization or not authorization.startswith("Bearer "):
+    if authorization and authorization.startswith("Bearer "):
+        tok = authorization[len("Bearer "):]
+    else:
         raise HTTPException(status_code=401, detail="missing bearer token")
-    tok = authorization[len("Bearer "):]
+    sid = _tokens.get(tok)
+    if sid is None:
+        raise HTTPException(status_code=401, detail="invalid token")
+    return sid
+
+
+def optional_student_id(
+    authorization: str | None = Header(None),
+    token: str | None = None,
+) -> int:
+    """For SSE connections — supports both header and query param."""
+    tok = token
+    if not tok and authorization and authorization.startswith("Bearer "):
+        tok = authorization[len("Bearer "):]
+    if not tok:
+        raise HTTPException(status_code=401, detail="missing token")
     sid = _tokens.get(tok)
     if sid is None:
         raise HTTPException(status_code=401, detail="invalid token")

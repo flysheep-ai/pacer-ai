@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>pacer · 高考陪跑AI</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" style="display:none;height:100vh;align-items:center;justify-content:center;background:var(--bg-primary)">
+  <div style="max-width:380px;width:100%;padding:48px 32px">
+    <div style="text-align:center;margin-bottom:36px">
+      <div style="font-size:28px;font-weight:650;color:var(--text-primary);letter-spacing:-0.03em">pacer</div>
+      <div style="font-size:14px;color:var(--text-secondary);margin-top:6px">你的高考陪跑AI</div>
+    </div>
+    <form id="login-form">
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">学号</label>
+        <input id="login-student-id" type="text" placeholder="输入学号" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;font-family:inherit;background:var(--surface);color:var(--text-primary);outline:none;transition:border-color var(--transition)" autofocus>
+      </div>
+      <div style="margin-bottom:24px">
+        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">密码（PIN）</label>
+        <input id="login-pin" type="password" placeholder="输入 PIN" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;font-family:inherit;background:var(--surface);color:var(--text-primary);outline:none;transition:border-color var(--transition)">
+      </div>
+      <button type="submit" style="width:100%;padding:12px;background:var(--text-primary);color:var(--bg-primary);border:none;border-radius:var(--radius-md);font-size:15px;font-weight:500;font-family:inherit;cursor:pointer;transition:opacity var(--transition)">进入 pacer</button>
+    </form>
+  </div>
+</div>
+
+<!-- Chat Screen -->
+<div id="chat-screen" style="display:none" class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-brand-dot"></span> pacer
+    </div>
+    <button id="new-chat-btn" class="sidebar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="sidebar-btn-text">新对话</span>
+    </button>
+    <div id="sessions-list" style="flex:1;overflow-y:auto;min-height:0"></div>
+    <div class="sidebar-footer">
+      <button class="sidebar-footer-btn" onclick="document.getElementById('file-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> 上传题目
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="header">
+      <span class="header-title">pacer · 高考陪跑</span>
+      <div class="header-actions">
+        <button class="theme-btn" id="theme-toggle" title="切换主题">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="chat" id="chat-scroll">
+      <div class="chat-inner" id="messages">
+        <div class="empty-state">
+          <div class="empty-state-icon">☀️</div>
+          <h1>早上好</h1>
+          <p>我是你的 AI 班主任。今天想学什么？</p>
+          <div class="suggestions">
+            <button class="suggestion" onclick="this.closest('.empty-state').remove();app.chatInput.value='帮我讲一道导数题';app.send()">📐 讲一道导数题</button>
+            <button class="suggestion" onclick="this.closest('.empty-state').remove();app.chatInput.value='今天该复习什么？';app.send()">📋 今日复习建议</button>
+            <button class="suggestion" onclick="this.closest('.empty-state').remove();app.chatInput.value='帮我分析一下这道错题';app.send()">📝 分析错题</button>
+            <button class="suggestion" onclick="this.closest('.empty-state').remove();app.chatInput.value='最近有点焦虑';app.send()">💭 聊聊压力</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-inner">
+        <button class="upload-btn" id="upload-btn" title="上传题目图片">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </button>
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="输入消息，或者拍照上传题目..."></textarea>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+        <button id="send-btn" class="send-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18v-6a9 9 0 0118 0v6"></path><path d="M21 19a2 2 0 01-2 2H5a2 2 0 01-2-2v-3h18v3z"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
