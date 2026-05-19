@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -17,19 +18,22 @@ class SendRequest(BaseModel):
     session_id: int | None = None
 
 
-class SendResponse(BaseModel):
-    text: str
+class SendAck(BaseModel):
     session_id: int
-    agent: str
+    assistant_message_id: int
 
 
-@router.post("/send", response_model=SendResponse)
+# In-memory registry of cancellable streaming tasks: {message_id: asyncio.Task}
+_streaming_tasks: dict[int, asyncio.Task] = {}
+
+
+@router.post("/send", response_model=SendAck, status_code=202)
 async def send_message(
     req: SendRequest,
     request: Request,
     db: Session = Depends(get_db),
     student_id: int = Depends(current_student_id),
-) -> SendResponse:
+) -> SendAck:
     store = SessionStore(db)
     if req.session_id is None:
         chat = store.create_session(student_id=student_id)
@@ -51,19 +55,53 @@ async def send_message(
         student_id=student_id,
         skills_loader=request.app.state.skills_loader,
     )
-    out = await orch.handle(req.text, history=history)
 
-    store.append_message(
-        chat.id, role="assistant", agent=out.agent_used, content=out.final_text,
-        metadata={
-            "iterations": out.inner.iterations,
-            "trace": out.inner.trace,
-            "route": {"intent": out.route.intent, "subject": out.route.subject},
-        },
-    )
+    # Create a placeholder assistant message (status='streaming')
+    msg = store.create_empty_assistant(chat.id, agent="homeroom")
     bus = request.app.state.event_bus
-    await bus.publish(SSEEvent(
-        student_id=student_id, event_type="assistant_message",
-        data={"session_id": chat.id, "text": out.final_text, "agent": out.agent_used},
-    ))
-    return SendResponse(text=out.final_text, session_id=chat.id, agent=out.agent_used)
+
+    async def run_stream():
+        collected: list[str] = []
+        try:
+            await bus.publish(SSEEvent(
+                student_id=student_id, event_type="assistant_start",
+                data={"session_id": chat.id, "message_id": msg.id, "agent": "homeroom"},
+            ))
+
+            async def on_delta(text: str):
+                collected.append(text)
+                # Persist each delta so SSE disconnect doesn't lose content
+                store.append_content_to_message(msg.id, text)
+                await bus.publish(SSEEvent(
+                    student_id=student_id, event_type="assistant_delta",
+                    data={"message_id": msg.id, "delta": text},
+                ))
+
+            out = await orch.handle_streaming(req.text, history=history, on_delta=on_delta)
+
+            store.finalize_message(msg.id, content=out.final_text, status="done")
+            await bus.publish(SSEEvent(
+                student_id=student_id, event_type="assistant_done",
+                data={"message_id": msg.id, "agent": out.agent_used, "stop_reason": "completed"},
+            ))
+        except asyncio.CancelledError:
+            store.finalize_message(msg.id, content="".join(collected), status="failed")
+            await bus.publish(SSEEvent(
+                student_id=student_id, event_type="assistant_done",
+                data={"message_id": msg.id, "stop_reason": "user_stopped"},
+            ))
+        finally:
+            _streaming_tasks.pop(msg.id, None)
+
+    task = asyncio.create_task(run_stream())
+    _streaming_tasks[msg.id] = task
+
+    return SendAck(session_id=chat.id, assistant_message_id=msg.id)
+
+
+@router.post("/{message_id}/stop", status_code=204)
+async def stop_stream(message_id: int, student_id: int = Depends(current_student_id)):
+    task = _streaming_tasks.get(message_id)
+    if task is not None and not task.done():
+        task.cancel()
+    return None

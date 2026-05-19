@@ -35,6 +35,7 @@ def client_token(tmp_path, monkeypatch):
 
 
 def test_two_turn_conversation_persists(client_token):
+    """Two-turn conversation: each send returns 202 ack, session_id persists."""
     client, token = client_token
     replies = [
         _rsp('{"intent":"chitchat","subject":null,"confidence":0.8}'),  # router turn 1
@@ -48,9 +49,10 @@ def test_two_turn_conversation_persists(client_token):
             "/message/send", json={"text": "你好"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert r1.status_code == 200
+        assert r1.status_code == 202
         body1 = r1.json()
-        assert body1["text"] == "你好，ZeroDay！"
+        assert "session_id" in body1
+        assert "assistant_message_id" in body1
         sid = body1["session_id"]
 
         r2 = client.post(
@@ -58,5 +60,5 @@ def test_two_turn_conversation_persists(client_token):
             json={"text": "我的目标是什么？", "session_id": sid},
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert r2.status_code == 200
+        assert r2.status_code == 202
         assert r2.json()["session_id"] == sid
