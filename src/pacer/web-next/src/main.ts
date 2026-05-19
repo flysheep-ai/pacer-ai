@@ -24,6 +24,8 @@ function reconcileSSE(token: string | null): void {
   if (token !== null) {
     stopSSE = startSSE(token, {
       onAssistantMessage: (p) => chat.receiveAssistantMessage(p),
+      onAssistantDelta: (p) => chat.receiveDelta(p),
+      onAssistantDone: (p) => chat.receiveDone(p),
     })
   }
 }
