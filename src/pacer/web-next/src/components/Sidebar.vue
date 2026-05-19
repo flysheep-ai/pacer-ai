@@ -76,15 +76,16 @@ async function deleteChat(sid: number): Promise<void> {
 
     <div class="section">历史会话</div>
     <div v-if="session.loading" class="hint">…</div>
-    <SidebarSessionItem
-      v-for="s in session.sessions"
-      :key="s.id"
-      :session="s"
-      @click="selectChat(s.id)"
-      @delete="deleteChat(s.id)"
-    />
+    <div class="session-scroll">
+      <SidebarSessionItem
+        v-for="s in session.sessions"
+        :key="s.id"
+        :session="s"
+        @click="selectChat(s.id)"
+        @delete="deleteChat(s.id)"
+      />
+    </div>
 
-    <div class="spacer" />
     <div class="footer">
       <button class="footer-row" type="button" @click="logout">退出</button>
     </div>
@@ -132,8 +133,8 @@ async function deleteChat(sid: number): Promise<void> {
   padding: var(--space-4) var(--space-3) var(--space-1);
 }
 .hint { color:var(--ink-500); font-size:13px; padding:4px 12px; }
-.spacer { flex: 1; }
-.footer { border-top: 1px solid var(--ink-300); padding-top: var(--space-2); }
+.session-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.footer { border-top: 1px solid var(--ink-300); padding: var(--space-2) 0; margin-top: var(--space-2); flex-shrink: 0; }
 .footer-row {
   text-align: left;
   padding: 8px 12px;
