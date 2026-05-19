@@ -12,11 +12,26 @@ from pacer.api.routes.internal import router as internal_router
 from pacer.api.routes.upload import router as upload_router
 from pacer.api.routes.profile import router as profile_router
 from pacer.session.events import EventBus
-from pacer.llm.client import LLMClient
 from pacer.skills.loader import SkillsLoader
 from pacer.config import get_settings
 
 WEB_DIR = Path(__file__).parent.parent / "web"
+
+
+def _create_llm_client(settings):
+    if settings.llm_provider == "openai-compat":
+        from pacer.llm.openai_client import OpenAICompatClient
+        return OpenAICompatClient(
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url,
+            model=settings.main_model,
+        )
+    else:
+        from pacer.llm.client import LLMClient
+        return LLMClient(
+            api_key=settings.llm_api_key,
+            model=settings.main_model,
+        )
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
@@ -33,9 +48,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     )
 
     app.state.event_bus = EventBus()
-    app.state.llm = LLMClient(
-        api_key=settings.anthropic_api_key, model=settings.main_model,
-    )
+    app.state.llm = _create_llm_client(settings)
     skills_root = Path(__file__).parent.parent / "skills" / "content"
     app.state.skills_loader = SkillsLoader(root=skills_root)
 

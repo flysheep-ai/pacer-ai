@@ -8,7 +8,9 @@ from pacer.api.deps import hash_pin
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_API_KEY", "sk-test")
     db_path = tmp_path / "test.db"
     url = f"sqlite:///{db_path}"
     engine = create_engine(url)

@@ -10,7 +10,9 @@ from pacer.llm.client import LLMResponse
 
 
 @pytest.fixture
-def client_and_token(tmp_path):
+def client_and_token(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_API_KEY", "sk-test")
     db_path = tmp_path / "test.db"
     url = f"sqlite:///{db_path}"
     engine = create_engine(url)
