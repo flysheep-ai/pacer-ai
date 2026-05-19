@@ -531,6 +531,22 @@ The work is complete when:
 4. The visual result matches §2 — no SaaS blue, no emoji, no large radii,
    no Material shadows
 
+## Progress
+
+- [x] Phase 1 (2026-05-19): Vite + Vue 3 scaffold, visual rewrite, chat parity — **complete**
+  - 21 commits: scaffold → stores → components → wiring → build verification
+  - 44 Vitest, 38 pytest, `pnpm typecheck`, `pnpm build` all green
+  - FastAPI prefer-serves `web-next/dist` with SPA fallback; legacy `web/` rollback verified
+- [ ] Phase 2: streaming + Markdown enhancements
+- [ ] Phase 3: session history
+- [ ] Phase 4: profile / errors / plan views; delete legacy `web/`
+
+## Phase 2–4 Implementation Notes
+
+- Phase 2 plan file: `docs/superpowers/plans/<date>-frontend-phase-2.md`
+- Phase 3 plan file: `docs/superpowers/plans/<date>-frontend-phase-3.md`
+- Phase 4 plan file: `docs/superpowers/plans/<date>-frontend-phase-4.md`
+
 ## Open Questions (none blocking)
 
 - Provider streaming compatibility: the chosen LLM provider must support
