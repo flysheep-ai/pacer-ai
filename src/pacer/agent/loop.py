@@ -117,6 +117,7 @@ class AgentLoop:
             total_in += resp.input_tokens
             total_out += resp.output_tokens
             if not resp.tool_calls:
+                await on_delta(resp.text)
                 return AgentResult(
                     final_text=resp.text, iterations=i, trace=trace,
                     stopped_reason=resp.stop_reason,
