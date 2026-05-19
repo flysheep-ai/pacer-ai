@@ -273,8 +273,7 @@ html, body {
   padding: 44px 36px;
   border-radius: var(--radius-xl);
   background: var(--surface);
-  box-shadow: 0 4px 32px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border);
 }
 [data-theme="dark"] .login-card {
   background: var(--surface);

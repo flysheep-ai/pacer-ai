@@ -117,20 +117,19 @@ class FluidBackground {
     const now = performance.now();
     for (let i = 0; i < count; i++) {
       if (this.particles.length >= this.maxParticles) {
-        // Recycle oldest
         this.particles.shift();
       }
-      // Small random offset so the stroke has texture
-      const ox = (Math.random() - 0.5) * 0.012;
-      const oy = (Math.random() - 0.5) * 0.012;
+      // Very tight offset — ink stays close to cursor
+      const ox = (Math.random() - 0.5) * 0.004;
+      const oy = (Math.random() - 0.5) * 0.004;
       this.particles.push({
         x: x + ox,
         y: y + oy,
-        vx: (Math.random() - 0.5) * 0.00008,
-        vy: (Math.random() - 0.5) * 0.00008,
-        life: 1.0,          // 1.0 → 0.0 over lifetime
-        decay: 0.003 + Math.random() * 0.006,  // how fast the ink fades
-        size: 6 + Math.random() * 18,           // initial blot size
+        vx: (Math.random() - 0.5) * 0.00015,
+        vy: (Math.random() - 0.5) * 0.00015,
+        life: 1.0,
+        decay: 0.008 + Math.random() * 0.01,
+        size: 5 + Math.random() * 14,
         born: now,
       });
     }
@@ -142,32 +141,27 @@ class FluidBackground {
     const cappedDt = Math.min(dt, 33);
     const now = performance.now();
 
-    // Spawn particles along mouse trail — like a brush stroke
+    // Spawn along mouse trail — tighter, more responsive
     if (this.mouse.active) {
       const dx = this.mouse.x - this.mouse.prevX;
       const dy = this.mouse.y - this.mouse.prevY;
       const speed = Math.sqrt(dx*dx + dy*dy);
-      // Faster movement = more ink (brush pressure)
-      const count = Math.min(Math.floor(speed * 80), 12);
-      if (count > 0 && now - this._lastSpawn > 8) {
+      // Always spawn at least a few particles each frame when mouse is moving
+      const count = Math.max(2, Math.min(Math.floor(speed * 120), 16));
+      if (now - this._lastSpawn > 5) { // faster spawn rate
         this._spawn(this.mouse.x, this.mouse.y, count);
         this._lastSpawn = now;
       }
     }
 
-    // Update each particle — ink spreading + fading
+    // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= p.decay * cappedDt * 0.06;
-      // Ink spreads as it dries — particle drifts + grows
       p.x += p.vx * cappedDt;
       p.y += p.vy * cappedDt;
-      // Slight size growth as ink bleeds
-      p.size += 0.015 * cappedDt;
-
-      if (p.life <= 0) {
-        this.particles.splice(i, 1);
-      }
+      p.size += 0.01 * cappedDt;
+      if (p.life <= 0) this.particles.splice(i, 1);
     }
   }
 
