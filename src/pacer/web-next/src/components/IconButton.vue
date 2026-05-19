@@ -1,6 +1,5 @@
 <script setup lang="ts">
 defineProps<{
-  ariaLabel: string
   title?: string
 }>()
 </script>
@@ -9,8 +8,7 @@ defineProps<{
   <button
     type="button"
     class="icon-btn"
-    :aria-label="ariaLabel"
-    :title="title ?? ariaLabel"
+    :title="title"
   >
     <slot />
   </button>
