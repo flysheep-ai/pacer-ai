@@ -537,7 +537,7 @@ The work is complete when:
   - 21 commits: scaffold → stores → components → wiring → build verification
   - 44 Vitest, 38 pytest, `pnpm typecheck`, `pnpm build` all green
   - FastAPI prefer-serves `web-next/dist` with SPA fallback; legacy `web/` rollback verified
-- [ ] Phase 2: streaming + Markdown enhancements
+- [x] Phase 2 (2026-05-19): streaming + Markdown enhancements — **complete**
 - [ ] Phase 3: session history
 - [ ] Phase 4: profile / errors / plan views; delete legacy `web/`
 
