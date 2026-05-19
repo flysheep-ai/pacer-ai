@@ -1,10 +1,13 @@
 <script setup lang="ts">
-defineProps<{ content: string }>()
+defineProps<{ content: string; imageBase64?: string }>()
 </script>
 
 <template>
   <div class="row">
-    <div class="bubble">{{ content }}</div>
+    <div class="bubble">
+      <img v-if="imageBase64" :src="'data:image/jpeg;base64,' + imageBase64" class="img" alt="上传的图片" />
+      <span v-if="content">{{ content }}</span>
+    </div>
   </div>
 </template>
 
@@ -24,5 +27,12 @@ defineProps<{ content: string }>()
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
+}
+.img {
+  max-width: 240px;
+  max-height: 240px;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin-bottom: 6px;
 }
 </style>

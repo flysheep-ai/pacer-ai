@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useToast } from '@/composables/useToast'
-import { apiFetch, ApiError } from '@/api/client'
 import IconButton from './IconButton.vue'
 
 const chat = useChatStore()
@@ -10,8 +9,12 @@ const toast = useToast()
 const text = ref('')
 const textarea = ref<HTMLTextAreaElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const attachedImage = ref<string | null>(null)
+const attachedImageName = ref('')
 const uploading = ref(false)
 const MAX_TEXT = 8000
+
+const canSend = computed(() => !chat.isAwaiting && !chat.isStreaming && (!!text.value.trim() || !!attachedImage.value))
 
 function autoResize(): void {
   const el = textarea.value
@@ -21,17 +24,19 @@ function autoResize(): void {
 }
 
 async function onSend(): Promise<void> {
-  if (chat.isAwaiting) return
+  if (!canSend.value) return
   const t = text.value.trim()
-  if (!t) return
   if (t.length > MAX_TEXT) {
     toast.push({ type: 'error', text: '消息过长' })
     return
   }
+  const img = attachedImage.value
   text.value = ''
+  attachedImage.value = null
+  attachedImageName.value = ''
   await nextTick()
   autoResize()
-  await chat.send(t)
+  await chat.send(t, img ?? undefined)
 }
 
 async function onStop(): Promise<void> {
@@ -45,9 +50,9 @@ function onKeydown(e: KeyboardEvent): void {
   }
 }
 
-interface UploadResponse {
-  auto_filled_stem?: string
-  auto_routed_to_subject?: string
+function removeImage(): void {
+  attachedImage.value = null
+  attachedImageName.value = ''
 }
 
 async function onFile(e: Event): Promise<void> {
@@ -64,24 +69,17 @@ async function onFile(e: Event): Promise<void> {
     input.value = ''
     return
   }
-  uploading.value = true
-  const fd = new FormData()
-  fd.append('file', file)
-  try {
-    const r = await apiFetch<UploadResponse>('/upload/image', { method: 'POST', body: fd })
-    if (r.auto_filled_stem) {
-      text.value = r.auto_filled_stem
-      await nextTick()
-      autoResize()
-      textarea.value?.focus()
-    }
-  } catch (err) {
-    const msg = err instanceof ApiError ? err.detail : '上传失败'
-    toast.push({ type: 'error', text: msg })
-  } finally {
-    uploading.value = false
-    input.value = ''
+  // Read file as base64 client-side
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUrl = reader.result as string
+    // dataUrl format: "data:image/jpeg;base64,xxxxx"
+    const base64 = dataUrl.split(',')[1]
+    attachedImage.value = base64
+    attachedImageName.value = file.name
   }
+  reader.readAsDataURL(file)
+  input.value = ''
 }
 </script>
 
@@ -99,12 +97,20 @@ async function onFile(e: Event): Promise<void> {
           <path d="M21 15l-5-5L5 21"/>
         </svg>
       </IconButton>
+      <div v-if="attachedImage" class="image-preview">
+        <img :src="'data:image/jpeg;base64,' + attachedImage" alt="预览" />
+        <button type="button" class="remove-img" @click="removeImage" title="移除图片">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
       <textarea
         ref="textarea"
         v-model="text"
         class="input"
         rows="1"
-        placeholder="输入消息，或拍照上传题目…"
+        :placeholder="attachedImage ? '描述这张图片…' : '输入消息，或拍照上传题目…'"
         @keydown="onKeydown"
         @input="autoResize"
       />
@@ -130,7 +136,7 @@ async function onFile(e: Event): Promise<void> {
         v-else
         type="button"
         class="send"
-        :disabled="chat.isAwaiting || !text.trim()"
+        :disabled="!canSend"
         @click="onSend"
       >
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -158,6 +164,26 @@ async function onFile(e: Event): Promise<void> {
 .composer:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.image-preview {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 4px 0;
+}
+.image-preview img {
+  height: 48px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--ink-300);
+}
+.remove-img {
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--ink-900);
+  color: var(--paper-0);
+  display: flex; align-items: center; justify-content: center;
 }
 .input {
   flex: 1;

@@ -16,6 +16,7 @@ router = APIRouter(prefix="/message", tags=["message"])
 class SendRequest(BaseModel):
     text: str
     session_id: int | None = None
+    image_base64: str | None = None
 
 
 class SendAck(BaseModel):
@@ -43,9 +44,22 @@ async def send_message(
             from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="session not found")
 
-    store.append_message(chat.id, role="user", agent=None, content=req.text)
+    if req.image_base64:
+        import json
+        user_content_for_db = json.dumps({"text": req.text, "image_base64": req.image_base64}, ensure_ascii=False)
+        user_content_for_llm: str | list[dict[str, Any]] = [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": req.image_base64}},
+            {"type": "text", "text": req.text},
+        ]
+    else:
+        user_content_for_db = req.text
+        user_content_for_llm = req.text
+
+    store.append_message(chat.id, role="user", agent=None, content=user_content_for_db)
     history_dicts = store.history_for_llm(chat.id)
     history = [LLMMessage(role=h["role"], content=h["content"]) for h in history_dicts[:-1]]
+    if req.image_base64:
+        history[-1] = LLMMessage(role="user", content=user_content_for_llm)
 
     settings = get_settings()
     orch = Orchestrator(

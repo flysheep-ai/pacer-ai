@@ -9,6 +9,7 @@ export interface ChatMessage {
   streaming?: boolean
   stopReason?: string
   messageId?: number
+  imageBase64?: string
 }
 
 interface SendAck {
@@ -49,17 +50,19 @@ export const useChatStore = defineStore('chat', {
       this.isAwaiting = false
     },
 
-    async send(text: string): Promise<number | null> {
+    async send(text: string, imageBase64?: string): Promise<number | null> {
       const trimmed = text.trim()
-      if (!trimmed) return null
-      this.messages.push({ role: 'user', content: trimmed })
+      if (!trimmed && !imageBase64) return null
+      this.messages.push({ role: 'user', content: trimmed, imageBase64 })
       this.isAwaiting = true
       const session = useSessionStore()
 
       try {
+        const body: Record<string, unknown> = { text: trimmed, session_id: session.currentSid }
+        if (imageBase64) body.image_base64 = imageBase64
         const r = await apiFetch<SendAck>('/message/send', {
           method: 'POST',
-          json: { text: trimmed, session_id: session.currentSid },
+          json: body,
         })
         session.currentSid = r.session_id
         this.messages.push({
@@ -108,13 +111,25 @@ export const useChatStore = defineStore('chat', {
           id: number; role: string; agent: string | null;
           content: string; status: string | null;
         }>>(`/sessions/${sid}/messages`)
-        this.messages = msgs.map(m => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-          agent: m.agent ?? undefined,
-          streaming: m.status === 'streaming',
-          stopReason: m.status === 'failed' && m.role === 'assistant' ? 'user_stopped' : undefined,
-        }))
+        this.messages = msgs.map(m => {
+          let content = m.content
+          let imageBase64: string | undefined
+          if (m.role === 'user' && m.content.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(m.content) as { text: string; image_base64?: string }
+              content = parsed.text
+              imageBase64 = parsed.image_base64
+            } catch { /* not JSON, keep as-is */ }
+          }
+          return {
+            role: m.role as 'user' | 'assistant',
+            content,
+            agent: m.agent ?? undefined,
+            streaming: m.status === 'streaming',
+            stopReason: m.status === 'failed' && m.role === 'assistant' ? 'user_stopped' : undefined,
+            imageBase64,
+          }
+        })
       } catch {
         this.messages = []
       }

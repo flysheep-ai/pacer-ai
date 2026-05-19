@@ -71,6 +71,22 @@ class OpenAICompatClient:
                     oai_msgs.append(tc_msg)
                 elif text_parts and not any(b["type"] == "tool_result" for b in blocks):
                     oai_msgs.append({"role": m.role, "content": "\n".join(text_parts)})
+                else:
+                    # Check for image blocks in multimodal content
+                    image_blocks = [b for b in blocks if b["type"] == "image"]
+                    if image_blocks:
+                        content_blocks: list[dict] = []
+                        for b in blocks:
+                            if b["type"] == "image":
+                                content_blocks.append({
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{b['source']['media_type']};base64,{b['source']['data']}"
+                                    },
+                                })
+                            elif b["type"] == "text":
+                                content_blocks.append({"type": "text", "text": b["text"]})
+                        oai_msgs.append({"role": m.role, "content": content_blocks})
             else:
                 oai_msgs.append({"role": m.role, "content": m.content})
         return oai_msgs

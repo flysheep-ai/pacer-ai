@@ -20,7 +20,7 @@ useAutoScroll(scrollEl, tick)
       <EmptyState v-if="chat.messages.length === 0" @preset="emit('preset', $event)" />
       <template v-else>
         <template v-for="(m, i) in chat.messages" :key="i">
-          <UserMessage v-if="m.role === 'user'" :content="m.content" />
+          <UserMessage v-if="m.role === 'user'" :content="m.content" :image-base64="m.imageBase64" />
           <AssistantMessage v-else :content="m.content" :agent="m.agent" :streaming="m.streaming" :stop-reason="m.stopReason" />
         </template>
         <div v-if="chat.isAwaiting" class="typing" aria-label="正在输入">
