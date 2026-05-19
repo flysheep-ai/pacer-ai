@@ -195,23 +195,35 @@ class FluidBackground {
     const v = this.velocities;
     const t = this.time;
     const mx = this.mouse.tx, my = this.mouse.ty;
-    const baseSpeed = 0.00018 * Math.min(dt, 33);
+    const cappedDt = Math.min(dt, 33);
+    const curlSpeed = 0.0002 * cappedDt;
 
     for (let i = 0; i < N; i++) {
       const px = p[i*2], py = p[i*2+1];
+
+      // Curl noise base flow
       const [cvx, cvy] = this._curl(px * 2.8, py * 2.8, t * 0.12);
 
-      // Gentle mouse repulsion
+      // Mouse influence — gentle swirl (tangential) + soft attraction (radial)
       const dx = px - mx, dy = py - my;
-      const d2 = dx*dx + dy*dy + 0.005;
-      const mf = 0.00004 / (d2 * d2); // falls off with r⁴ — very local
+      const dist = Math.sqrt(dx*dx + dy*dy) + 0.002;
+      const w = 0.04 / (1.0 + dist * 6.0); // influence weight, falls off with distance
 
-      v[i*2]   = cvx * baseSpeed + dx / (Math.sqrt(d2) + 1e-6) * mf * dt * 0.02;
-      v[i*2+1] = cvy * baseSpeed + dy / (Math.sqrt(d2) + 1e-6) * mf * dt * 0.02;
+      // Tangential component: swirl around mouse (clockwise)
+      const swirlX = -dy / dist * w;
+      const swirlY =  dx / dist * w;
+      // Radial component: gentle pull toward mouse
+      const pullX = -dx / dist * w * 0.25;
 
+      const mouseSpeed = 0.0005 * cappedDt;
+      v[i*2]   = cvx * curlSpeed + (swirlX + pullX) * mouseSpeed;
+      v[i*2+1] = cvy * curlSpeed + swirlY * mouseSpeed;
+
+      // Integrate
       p[i*2]   += v[i*2];
       p[i*2+1] += v[i*2+1];
 
+      // Wrap
       if (p[i*2] < -0.08) p[i*2] = 1.08;
       if (p[i*2] > 1.08) p[i*2] = -0.08;
       if (p[i*2+1] < -0.08) p[i*2+1] = 1.08;
