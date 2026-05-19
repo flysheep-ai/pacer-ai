@@ -114,23 +114,19 @@ class FluidBackground {
   // ─── spawn ──────────────────────────────────────────────
 
   _spawn(x, y, count) {
-    const now = performance.now();
     for (let i = 0; i < count; i++) {
       if (this.particles.length >= this.maxParticles) {
         this.particles.shift();
       }
-      // Very tight offset — ink stays close to cursor
-      const ox = (Math.random() - 0.5) * 0.004;
-      const oy = (Math.random() - 0.5) * 0.004;
+      // Minimal noise — ink sits right under cursor
+      const jx = (Math.random() - 0.5) * 0.0015;
+      const jy = (Math.random() - 0.5) * 0.0015;
       this.particles.push({
-        x: x + ox,
-        y: y + oy,
-        vx: (Math.random() - 0.5) * 0.00015,
-        vy: (Math.random() - 0.5) * 0.00015,
+        x: x + jx,
+        y: y + jy,
         life: 1.0,
-        decay: 0.008 + Math.random() * 0.01,
-        size: 5 + Math.random() * 14,
-        born: now,
+        decay: 0.012 + Math.random() * 0.014,
+        size: 4 + Math.random() * 10,
       });
     }
   }
@@ -141,26 +137,26 @@ class FluidBackground {
     const cappedDt = Math.min(dt, 33);
     const now = performance.now();
 
-    // Spawn along mouse trail — tighter, more responsive
+    // Spawn every frame when mouse is active — no throttle, no gap
     if (this.mouse.active) {
+      // Interpolate along the trail so there are no gaps
       const dx = this.mouse.x - this.mouse.prevX;
       const dy = this.mouse.y - this.mouse.prevY;
-      const speed = Math.sqrt(dx*dx + dy*dy);
-      // Always spawn at least a few particles each frame when mouse is moving
-      const count = Math.max(2, Math.min(Math.floor(speed * 120), 16));
-      if (now - this._lastSpawn > 5) { // faster spawn rate
-        this._spawn(this.mouse.x, this.mouse.y, count);
-        this._lastSpawn = now;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const steps = Math.max(1, Math.ceil(dist * 400));
+      for (let s = 0; s < steps; s++) {
+        const t = steps === 1 ? 1 : s / (steps - 1);
+        const ix = this.mouse.prevX + dx * t;
+        const iy = this.mouse.prevY + dy * t;
+        this._spawn(ix, iy, 1);
       }
     }
 
-    // Update particles
+    // Update particles — no drift, only size growth (ink bleeding) + fade
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= p.decay * cappedDt * 0.06;
-      p.x += p.vx * cappedDt;
-      p.y += p.vy * cappedDt;
-      p.size += 0.01 * cappedDt;
+      p.size += 0.012 * cappedDt; // ink slowly bleeds outward
       if (p.life <= 0) this.particles.splice(i, 1);
     }
   }
@@ -186,7 +182,7 @@ class FluidBackground {
       pos[i*2+1] = p.y;
       sz[i]  = p.size;
       // Alpha follows life curve — stays visible then fades
-      al[i]  = p.life * 0.22; // max ~22% opacity, subtle ink
+      al[i]  = p.life * 0.38; // visible ink at birth, fades out
     }
 
     const a = this._u;
