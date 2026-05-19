@@ -538,14 +538,13 @@ The work is complete when:
   - 44 Vitest, 38 pytest, `pnpm typecheck`, `pnpm build` all green
   - FastAPI prefer-serves `web-next/dist` with SPA fallback; legacy `web/` rollback verified
 - [x] Phase 2 (2026-05-19): streaming + Markdown enhancements — **complete**
-- [ ] Phase 3: session history
-- [ ] Phase 4: profile / errors / plan views; delete legacy `web/`
+- [x] Phase 3 (2026-05-19): session history — **complete**
+- [x] Phase 4 (2026-05-19): profile / errors / plan views; legacy `web/` deleted — **complete**
 
 ## Phase 2–4 Implementation Notes
 
-- Phase 2 plan file: `docs/superpowers/plans/<date>-frontend-phase-2.md`
-- Phase 3 plan file: `docs/superpowers/plans/<date>-frontend-phase-3.md`
-- Phase 4 plan file: `docs/superpowers/plans/<date>-frontend-phase-4.md`
+- Phase 2 plan file: `docs/superpowers/plans/2026-05-19-frontend-phase-2.md`
+- Phase 3+4 plan file: `docs/superpowers/plans/2026-05-19-frontend-phase-3-4.md`
 
 ## Open Questions (none blocking)
 

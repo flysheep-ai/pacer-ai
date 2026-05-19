@@ -17,7 +17,6 @@ from pacer.session.events import EventBus
 from pacer.skills.loader import SkillsLoader
 from pacer.config import get_settings
 
-LEGACY_WEB_DIR = Path(__file__).parent.parent / "web"
 NEXT_DIST_DIR = Path(__file__).parent.parent / "web-next" / "dist"
 
 
@@ -65,20 +64,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
     # (/{full_path:path}) would otherwise shadow any later-registered API route.
     if NEXT_DIST_DIR.exists():
         _mount_spa(app, NEXT_DIST_DIR)
-    elif LEGACY_WEB_DIR.exists():
-        _mount_legacy(app, LEGACY_WEB_DIR)
 
     return app
-
-
-def _mount_legacy(app: FastAPI, web_dir: Path) -> None:
-    static_dir = web_dir / "static"
-    if static_dir.exists():
-        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-    @app.get("/", include_in_schema=False)
-    async def legacy_index():
-        return FileResponse(str(web_dir / "index.html"))
 
 
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
