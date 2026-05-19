@@ -196,28 +196,28 @@ class FluidBackground {
     const t = this.time;
     const mx = this.mouse.tx, my = this.mouse.ty;
     const cappedDt = Math.min(dt, 33);
-    const curlSpeed = 0.0002 * cappedDt;
+    const curlSpeed = 0.00015 * cappedDt;
+    const mouseFactor = 0.003 * cappedDt; // much stronger mouse response
 
     for (let i = 0; i < N; i++) {
       const px = p[i*2], py = p[i*2+1];
 
-      // Curl noise base flow
+      // Curl noise base flow (slower, so mouse interaction is more visible)
       const [cvx, cvy] = this._curl(px * 2.8, py * 2.8, t * 0.12);
 
-      // Mouse influence — gentle swirl (tangential) + soft attraction (radial)
+      // Mouse — gentle swirl toward cursor
       const dx = px - mx, dy = py - my;
-      const dist = Math.sqrt(dx*dx + dy*dy) + 0.002;
-      const w = 0.04 / (1.0 + dist * 6.0); // influence weight, falls off with distance
+      const dist = Math.sqrt(dx*dx + dy*dy) + 0.001;
 
-      // Tangential component: swirl around mouse (clockwise)
-      const swirlX = -dy / dist * w;
-      const swirlY =  dx / dist * w;
-      // Radial component: gentle pull toward mouse
-      const pullX = -dx / dist * w * 0.25;
+      // Influence radius: visible up to ~30% of screen
+      const w = 1.0 / (1.0 + dist * dist * 50.0);
 
-      const mouseSpeed = 0.0005 * cappedDt;
-      v[i*2]   = cvx * curlSpeed + (swirlX + pullX) * mouseSpeed;
-      v[i*2+1] = cvy * curlSpeed + swirlY * mouseSpeed;
+      // Clockwise swirl around mouse
+      const sx = -dy / dist * w;
+      const sy =  dx / dist * w;
+
+      v[i*2]   = cvx * curlSpeed + sx * mouseFactor;
+      v[i*2+1] = cvy * curlSpeed + sy * mouseFactor;
 
       // Integrate
       p[i*2]   += v[i*2];
