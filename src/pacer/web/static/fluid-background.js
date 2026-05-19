@@ -225,32 +225,39 @@ class FluidBackground {
   // ─── events ─────────────────────────────────────────────
 
   _bindEvents() {
-    window.addEventListener('mousemove', (e) => {
-      const x = e.clientX / window.innerWidth;
-      const y = 1.0 - e.clientY / window.innerHeight;
+    this._onMouse = (e) => {
       this.mouse.prevX = this.mouse.x;
       this.mouse.prevY = this.mouse.y;
-      this.mouse.x = x;
-      this.mouse.y = y;
+      this.mouse.x = e.clientX / window.innerWidth;
+      this.mouse.y = 1.0 - e.clientY / window.innerHeight;
       this.mouse.active = true;
-    });
-    window.addEventListener('mouseleave', () => {
-      this.mouse.active = false;
-    });
-    // Touch
-    window.addEventListener('touchmove', (e) => {
+    };
+    this._onLeave = () => { this.mouse.active = false; };
+    this._onTouch = (e) => {
       if (e.touches.length > 0) {
-        const x = e.touches[0].clientX / window.innerWidth;
-        const y = 1.0 - e.touches[0].clientY / window.innerHeight;
         this.mouse.prevX = this.mouse.x;
         this.mouse.prevY = this.mouse.y;
-        this.mouse.x = x;
-        this.mouse.y = y;
+        this.mouse.x = e.touches[0].clientX / window.innerWidth;
+        this.mouse.y = 1.0 - e.touches[0].clientY / window.innerHeight;
         this.mouse.active = true;
       }
-    }, { passive: true });
-    window.addEventListener('touchend', () => { this.mouse.active = false; });
-    window.addEventListener('resize', () => this._resize());
+    };
+    this._onTouchEnd = () => { this.mouse.active = false; };
+    this._onResize = () => this._resize();
+
+    window.addEventListener('mousemove', this._onMouse);
+    window.addEventListener('mouseleave', this._onLeave);
+    window.addEventListener('touchmove', this._onTouch, { passive: true });
+    window.addEventListener('touchend', this._onTouchEnd);
+    window.addEventListener('resize', this._onResize);
+  }
+
+  _unbindEvents() {
+    window.removeEventListener('mousemove', this._onMouse);
+    window.removeEventListener('mouseleave', this._onLeave);
+    window.removeEventListener('touchmove', this._onTouch);
+    window.removeEventListener('touchend', this._onTouchEnd);
+    window.removeEventListener('resize', this._onResize);
   }
 
   // ─── loop ───────────────────────────────────────────────
@@ -266,11 +273,34 @@ class FluidBackground {
 
   destroy() {
     cancelAnimationFrame(this.rafId);
-    if (this.gl) this.gl.getExtension('WEBGL_lose_context')?.loseContext();
+    this._unbindEvents();
+    if (this.gl) {
+      this.gl.getExtension('WEBGL_lose_context')?.loseContext();
+      this.gl = null;
+    }
+    this.particles.length = 0;
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// Managed lifecycle — start on login page, stop on chat page
+window._fluidInstance = null;
+
+function fluidStart() {
+  if (window._fluidInstance) return;
   const canvas = document.getElementById('fluid-canvas');
-  if (canvas) new FluidBackground(canvas);
-});
+  if (canvas) {
+    canvas.style.display = 'block';
+    window._fluidInstance = new FluidBackground(canvas);
+  }
+}
+
+function fluidStop() {
+  if (window._fluidInstance) {
+    window._fluidInstance.destroy();
+    window._fluidInstance = null;
+  }
+  const canvas = document.getElementById('fluid-canvas');
+  if (canvas) canvas.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => fluidStart());

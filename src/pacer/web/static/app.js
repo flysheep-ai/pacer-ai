@@ -71,15 +71,13 @@ const Pacer = {
   _showLogin() {
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('chat-screen').style.display = 'none';
-    const c = document.getElementById('fluid-canvas');
-    if (c) c.style.display = 'block';
+    if (typeof fluidStart === 'function') fluidStart();
   },
 
   _showChat() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('chat-screen').style.display = 'flex';
-    const c = document.getElementById('fluid-canvas');
-    if (c) c.style.display = 'none';
+    if (typeof fluidStop === 'function') fluidStop();
   },
 
   async _loadName() {
@@ -146,12 +144,12 @@ const Pacer = {
     this.sessionId = null;
     const msgs = document.getElementById('messages');
     msgs.innerHTML = `<div id="empty-state" class="empty-state">
-      <div class="empty-state-icon">☀️</div><h1>新对话</h1><p>有什么想聊的？</p>
+      <div class="empty-state-icon"></div><h1>新对话</h1><p>有什么想聊的？</p>
       <div class="suggestions">
-        <button class="suggestion" onclick="Pacer.sendPreset('帮我讲一道导数题')">📐 讲一道导数题</button>
-        <button class="suggestion" onclick="Pacer.sendPreset('帮我制定今天的学习计划')">📋 今日学习计划</button>
-        <button class="suggestion" onclick="Pacer.sendPreset('帮我分析一下这道错题')">📝 分析错题</button>
-        <button class="suggestion" onclick="Pacer.sendPreset('最近有点焦虑，想聊聊')">💭 聊聊压力</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我讲一道导数题')">讲一道导数题</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我制定今天的学习计划')">今日学习计划</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我分析一下这道错题')">分析错题</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('最近有点焦虑，想聊聊')">聊聊压力</button>
       </div></div>`;
   },
 
@@ -162,8 +160,8 @@ const Pacer = {
     const div = document.createElement('div');
     div.className = 'msg msg-' + role;
     let tag = '';
-    if (agent === 'subject_teacher') tag = '<span class="msg-agent-badge">📚 学科老师</span>';
-    if (agent === 'mood_companion') tag = '<span class="msg-agent-badge">💗 心态陪伴</span>';
+    if (agent === 'subject_teacher') tag = '<span class="msg-agent-badge">学科老师</span>';
+    if (agent === 'mood_companion') tag = '<span class="msg-agent-badge">心态陪伴</span>';
     div.innerHTML = tag + '<div class="msg-bubble">' + this._md(content) + '</div>';
     document.getElementById('messages').appendChild(div);
     const sc = document.getElementById('chat-scroll');
