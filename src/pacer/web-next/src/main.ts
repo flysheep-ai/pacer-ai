@@ -30,11 +30,14 @@ function reconcileSSE(token: string | null): void {
   }
 }
 
-reconcileSSE(auth.token)
 watch(() => auth.token, reconcileSSE)
 
-if (auth.isAuthenticated) {
-  void auth.loadProfile()
-}
-
+// Defer SSE and profile loading until router resolves auth state.
+// If a stale token is in localStorage, loadProfile() will fail → logout() → token→null → SSE stays off.
 app.mount('#app')
+
+if (auth.isAuthenticated) {
+  auth.loadProfile().then(() => {
+    if (auth.isAuthenticated) reconcileSSE(auth.token)
+  })
+}

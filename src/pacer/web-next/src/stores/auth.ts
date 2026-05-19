@@ -49,7 +49,11 @@ export const useAuthStore = defineStore('auth', {
     },
     async loadProfile(): Promise<void> {
       if (!this.token) return
-      this.profile = await apiFetch<Profile>('/profile/')
+      try {
+        this.profile = await apiFetch<Profile>('/profile/')
+      } catch {
+        this.logout()
+      }
     },
   },
 })

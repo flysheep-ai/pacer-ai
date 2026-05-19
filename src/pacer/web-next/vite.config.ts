@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
-const API_TARGET = 'http://localhost:8000'
+const API_TARGET = 'http://localhost:8001'
 const API_PREFIXES = [
   '/auth', '/message', '/events', '/upload',
   '/profile', '/sessions', '/errors', '/plans', '/mastery',
