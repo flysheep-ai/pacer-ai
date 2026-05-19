@@ -125,7 +125,7 @@ class FluidBackground {
         y: y + jy,
         life: 1.0,
         decay: 0.025 + Math.random() * 0.025,  // fades faster
-        size: 1.2 + Math.random() * 2.5,         // barely-there ink dots
+        size: 1.5 + Math.random() * 3.5,         // ~12-40 px with scale 8
       });
     }
   }
@@ -209,7 +209,7 @@ class FluidBackground {
     gl.vertexAttribPointer(a.aAlpha, 1, gl.FLOAT, false, 0, 0);
 
     gl.uniform2f(a.uRes, this.canvas.width, this.canvas.height);
-    gl.uniform1f(a.uPtScale, 2.8); // tiny ink dots: 2.8 × (1.2~3.7) ≈ 3-10 px
+    gl.uniform1f(a.uPtScale, 8.0);
 
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     // Ink colour — warm grey-black on light, soft grey on dark
