@@ -58,8 +58,9 @@ async def send_message(
     store.append_message(chat.id, role="user", agent=None, content=user_content_for_db)
     history_dicts = store.history_for_llm(chat.id)
     history = [LLMMessage(role=h["role"], content=h["content"]) for h in history_dicts[:-1]]
+    user_message_for_llm: str | list[dict[str, Any]] = req.text
     if req.image_base64:
-        history[-1] = LLMMessage(role="user", content=user_content_for_llm)
+        user_message_for_llm = user_content_for_llm
 
     settings = get_settings()
     orch = Orchestrator(
@@ -93,7 +94,7 @@ async def send_message(
                     data={"message_id": msg.id, "delta": text},
                 ))
 
-            out = await orch.handle_streaming(req.text, history=history, on_delta=on_delta)
+            out = await orch.handle_streaming(user_message_for_llm, history=history, on_delta=on_delta)
 
             local_store.finalize_message(msg.id, content=out.final_text, status="done")
             await bus.publish(SSEEvent(

@@ -66,10 +66,11 @@ class Orchestrator:
         )
 
     async def handle_streaming(
-        self, user_message: str, history: list[LLMMessage],
+        self, user_message: str | list[dict[str, Any]], history: list[LLMMessage],
         on_delta: Callable[[str], Awaitable[None]],
     ) -> OrchestratedResult:
-        route = await self.router.route(user_message)
+        route_text = user_message if isinstance(user_message, str) else " ".join(b.get("text", "") for b in user_message if b.get("type") == "text")
+        route = await self.router.route(route_text)
 
         if route.intent == "subject_qa" and route.subject:
             agent = build_subject_teacher_agent(

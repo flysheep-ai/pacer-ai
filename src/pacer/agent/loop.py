@@ -81,7 +81,7 @@ class AgentLoop:
 
     async def run_streaming(
         self,
-        user_message: str,
+        user_message: str | list[dict[str, Any]],
         history: list[LLMMessage],
         on_delta: Callable[[str], Awaitable[None]],
         recalled_memory_block: str | None = None,
