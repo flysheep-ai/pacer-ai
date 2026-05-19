@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from sqlalchemy.orm import Session
 from pacer.llm.client import LLMClient, LLMMessage
 from pacer.skills.loader import SkillsLoader
@@ -60,6 +60,39 @@ class Orchestrator:
             agent_used = "homeroom"
 
         result = await agent.run(user_message, history=history)
+        return OrchestratedResult(
+            final_text=result.final_text, agent_used=agent_used,
+            subject=route.subject, route=route, inner=result,
+        )
+
+    async def handle_streaming(
+        self, user_message: str, history: list[LLMMessage],
+        on_delta: Callable[[str], Awaitable[None]],
+    ) -> OrchestratedResult:
+        route = await self.router.route(user_message)
+
+        if route.intent == "subject_qa" and route.subject:
+            agent = build_subject_teacher_agent(
+                llm=self.llm, session_factory=self.session_factory,
+                student_id=self.student_id, subject=route.subject,
+                skills_loader=self.skills_loader,
+                vision_model=self.vision_model,
+            )
+            agent_used = "subject_teacher"
+        elif route.intent == "mood_support":
+            agent = build_mood_agent(
+                llm=self.llm, session_factory=self.session_factory,
+                student_id=self.student_id,
+            )
+            agent_used = "mood_companion"
+        else:
+            agent = build_homeroom_agent(
+                llm=self.llm, session_factory=self.session_factory,
+                student_id=self.student_id,
+            )
+            agent_used = "homeroom"
+
+        result = await agent.run_streaming(user_message, history=history, on_delta=on_delta)
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
