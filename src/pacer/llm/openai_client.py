@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import AsyncIterator
 from typing import Any
 from openai import AsyncOpenAI
 from pacer.llm.client import LLMMessage, LLMResponse
@@ -140,6 +141,63 @@ class OpenAICompatClient:
             output_tokens=resp.usage.completion_tokens if resp.usage else 0,
             raw=resp,
         )
+
+    async def chat_stream(
+        self,
+        messages: list[LLMMessage],
+        *,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> AsyncIterator[StreamChunk]:
+        from pacer.llm.client import StreamChunk
+
+        oai_msgs: list[dict] = []
+        if system:
+            oai_msgs.append({"role": "system", "content": system})
+        for m in messages:
+            if isinstance(m.content, list):
+                blocks = m.content
+                text_parts = [b["text"] for b in blocks if b["type"] == "text"]
+                tool_calls = []
+                for b in blocks:
+                    if b["type"] == "tool_use":
+                        import json
+                        tool_calls.append({
+                            "id": b["id"], "type": "function",
+                            "function": {"name": b["name"], "arguments": json.dumps(b["input"], ensure_ascii=False)},
+                        })
+                    elif b["type"] == "tool_result":
+                        oai_msgs.append({"role": "tool", "tool_call_id": b["tool_use_id"], "content": str(b["content"])})
+                if tool_calls:
+                    tc_msg = {"role": "assistant", "content": "\n".join(text_parts) or None}
+                    tc_msg["tool_calls"] = tool_calls
+                    oai_msgs.append(tc_msg)
+                elif text_parts and not any(b["type"] == "tool_result" for b in blocks):
+                    oai_msgs.append({"role": m.role, "content": "\n".join(text_parts)})
+            else:
+                oai_msgs.append({"role": m.role, "content": m.content})
+
+        kwargs = {
+            "model": model or self.model,
+            "max_tokens": self.max_tokens,
+            "messages": oai_msgs,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if tools:
+            kwargs["tools"] = _anthropic_tools_to_openai(tools)
+
+        resp = await self._client.chat.completions.create(**kwargs)
+        async for chunk in resp:
+            choice = chunk.choices[0] if chunk.choices else None
+            if choice is None:
+                continue
+            delta = choice.delta
+            if delta and delta.content:
+                yield StreamChunk(delta_text=delta.content)
+            if choice.finish_reason:
+                yield StreamChunk(delta_text="", finish_reason=choice.finish_reason)
 
     async def chat_with_images(
         self, *, system: str, user_text: str,

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
 from anthropic import AsyncAnthropic
@@ -8,6 +9,13 @@ from anthropic import AsyncAnthropic
 class LLMMessage:
     role: Literal["user", "assistant"]
     content: str | list[dict[str, Any]]
+
+
+@dataclass
+class StreamChunk:
+    delta_text: str
+    tool_call_delta: dict[str, Any] | None = None
+    finish_reason: str | None = None
 
 
 @dataclass
@@ -60,6 +68,29 @@ class LLMClient:
             output_tokens=resp.usage.output_tokens,
             raw=resp,
         )
+
+    async def chat_stream(
+        self,
+        messages: list[LLMMessage],
+        *,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> AsyncIterator[StreamChunk]:
+        kwargs: dict[str, Any] = {
+            "model": model or self.model,
+            "max_tokens": self.max_tokens,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+        }
+        if system:
+            kwargs["system"] = system
+        if tools:
+            kwargs["tools"] = tools
+
+        async with self._client.messages.stream(**kwargs) as stream:
+            async for event in stream:
+                if event.type == "content_block_delta" and event.delta.type == "text_delta":
+                    yield StreamChunk(delta_text=event.delta.text)
 
     async def chat_with_images(
         self,
