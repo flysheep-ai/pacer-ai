@@ -8,23 +8,28 @@
 </head>
 <body>
 
+<!-- WebGL Fluid Background -->
+<canvas id="fluid-canvas" class="fluid-canvas" aria-hidden="true"></canvas>
+<script src="/static/fluid-background.js"></script>
+
 <!-- Login Screen -->
-<div id="login-screen" style="display:none;height:100vh;align-items:center;justify-content:center;background:var(--bg-primary)">
-  <div style="max-width:380px;width:100%;padding:48px 32px">
-    <div style="text-align:center;margin-bottom:36px">
-      <div style="font-size:28px;font-weight:650;color:var(--text-primary);letter-spacing:-0.03em">pacer</div>
-      <div style="font-size:14px;color:var(--text-secondary);margin-top:6px">你的高考陪跑AI</div>
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-dot"></div>
+      <div class="login-brand-text">pacer</div>
+      <div class="login-brand-sub">高考陪跑AI</div>
     </div>
     <form id="login-form">
-      <div style="margin-bottom:16px">
-        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">学号</label>
-        <input id="login-student-id" type="text" placeholder="输入学号" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;font-family:inherit;background:var(--surface);color:var(--text-primary);outline:none;transition:border-color var(--transition)" autofocus>
+      <div class="login-field">
+        <label for="login-student-id">学号</label>
+        <input id="login-student-id" type="text" placeholder="输入学号" autofocus>
       </div>
-      <div style="margin-bottom:24px">
-        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">密码（PIN）</label>
-        <input id="login-pin" type="password" placeholder="输入 PIN" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:15px;font-family:inherit;background:var(--surface);color:var(--text-primary);outline:none;transition:border-color var(--transition)">
+      <div class="login-field">
+        <label for="login-pin">密码（PIN）</label>
+        <input id="login-pin" type="password" placeholder="输入 PIN">
       </div>
-      <button type="submit" style="width:100%;padding:12px;background:var(--text-primary);color:var(--bg-primary);border:none;border-radius:var(--radius-md);font-size:15px;font-weight:500;font-family:inherit;cursor:pointer;transition:opacity var(--transition)">进入 pacer</button>
+      <button type="submit" class="login-btn">进入 pacer</button>
     </form>
   </div>
 </div>
