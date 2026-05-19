@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useChatStore } from '@/stores/chat'
+import SidebarSessionItem from './SidebarSessionItem.vue'
 
 const auth = useAuthStore()
 const session = useSessionStore()
@@ -31,6 +32,11 @@ async function logout(): Promise<void> {
 function preset(text: string): void {
   void chat.send(text)
 }
+
+function selectChat(sid: number): void {
+  session.selectSession(sid)
+  void router.push(`/chat/${sid}`)
+}
 </script>
 
 <template>
@@ -54,6 +60,15 @@ function preset(text: string): void {
         : p === '帮我复盘最近的错题'   ? '错题复盘'
         : '学习日报' }}
     </button>
+
+    <div class="section">历史会话</div>
+    <div v-if="session.loading" class="hint">…</div>
+    <SidebarSessionItem
+      v-for="s in session.sessions"
+      :key="s.id"
+      :session="s"
+      @click="selectChat(s.id)"
+    />
 
     <div class="spacer" />
     <div class="footer">
@@ -102,6 +117,7 @@ function preset(text: string): void {
   letter-spacing: 0.08em;
   padding: var(--space-4) var(--space-3) var(--space-1);
 }
+.hint { color:var(--ink-500); font-size:13px; padding:4px 12px; }
 .spacer { flex: 1; }
 .footer { border-top: 1px solid var(--ink-300); padding-top: var(--space-2); }
 .footer-row {

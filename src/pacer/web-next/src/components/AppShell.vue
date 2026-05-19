@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import Sidebar from './Sidebar.vue'
 import TopBar from './TopBar.vue'
+import { useSessionStore } from '@/stores/session'
+
+const session = useSessionStore()
+onMounted(() => { void session.fetchList() })
 </script>
 
 <template>

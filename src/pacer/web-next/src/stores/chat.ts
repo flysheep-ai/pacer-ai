@@ -101,6 +101,25 @@ export const useChatStore = defineStore('chat', {
       this._streamingMid = null
     },
 
+    async loadHistory(sid: number): Promise<void> {
+      this.reset()
+      try {
+        const msgs = await apiFetch<Array<{
+          id: number; role: string; agent: string | null;
+          content: string; status: string | null;
+        }>>(`/sessions/${sid}/messages`)
+        this.messages = msgs.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          agent: m.agent ?? undefined,
+          streaming: m.status === 'streaming',
+          stopReason: m.status === 'failed' && m.role === 'assistant' ? 'user_stopped' : undefined,
+        }))
+      } catch {
+        this.messages = []
+      }
+    },
+
     async stopStreaming(): Promise<void> {
       const mid = this._streamingMid
       if (mid === null) return
