@@ -42,19 +42,19 @@ describe('useChatStore', () => {
     expect(s.isAwaiting).toBe(true)
   })
 
-  it('send appends assistant from POST response when SSE has not arrived', async () => {
+  it('send appends placeholder assistant from 202 ack', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
-        text: 'world', session_id: 42, agent: 'subject_teacher',
-      }), { status: 200, headers: { 'content-type': 'application/json' } }),
+        session_id: 42, assistant_message_id: 99,
+      }), { status: 202, headers: { 'content-type': 'application/json' } }),
     )
     const s = useChatStore()
     await s.send('hello')
     expect(s.messages.length).toBe(2)
     expect(s.messages[1].role).toBe('assistant')
-    expect(s.messages[1].content).toBe('world')
-    expect(s.messages[1].agent).toBe('subject_teacher')
-    expect(s.isAwaiting).toBe(false)
+    expect(s.messages[1].content).toBe('')
+    expect(s.messages[1].streaming).toBe(true)
+    expect(s.messages[1].messageId).toBe(99)
     const session = useSessionStore()
     expect(session.currentSid).toBe(42)
   })
@@ -69,17 +69,11 @@ describe('useChatStore', () => {
     expect(s.isAwaiting).toBe(false)
   })
 
-  it('deduplicates assistant message when POST and SSE both deliver same content', async () => {
+  it('deduplicates legacy assistant message via _lastAssistantContent', () => {
     const s = useChatStore()
-    let resolveFetch!: (r: Response) => void
-    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(r => { resolveFetch = r })) as unknown as typeof fetch
-    const pending = s.send('hello')
     s.receiveAssistantMessage({ session_id: 42, text: 'reply', agent: 'homeroom' })
     expect(s.messages.filter(m => m.role === 'assistant').length).toBe(1)
-    resolveFetch(new Response(JSON.stringify({
-      text: 'reply', session_id: 42, agent: 'homeroom',
-    }), { status: 200, headers: { 'content-type': 'application/json' } }))
-    await pending
+    s.receiveAssistantMessage({ session_id: 42, text: 'reply', agent: 'homeroom' })
     expect(s.messages.filter(m => m.role === 'assistant').length).toBe(1)
   })
 
