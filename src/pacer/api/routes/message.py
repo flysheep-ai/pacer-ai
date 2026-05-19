@@ -3,7 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from pacer.api.deps import _SessionLocal, get_db, current_student_id
+from pacer.api import deps
 from pacer.session.store import SessionStore
 from pacer.session.events import SSEEvent
 from pacer.llm.client import LLMMessage
@@ -31,8 +31,8 @@ _streaming_tasks: dict[int, asyncio.Task] = {}
 async def send_message(
     req: SendRequest,
     request: Request,
-    db: Session = Depends(get_db),
-    student_id: int = Depends(current_student_id),
+    db: Session = Depends(deps.get_db),
+    student_id: int = Depends(deps.current_student_id),
 ) -> SendAck:
     store = SessionStore(db)
     if req.session_id is None:
@@ -62,7 +62,7 @@ async def send_message(
 
     async def run_stream():
         collected: list[str] = []
-        db_session = _SessionLocal()
+        db_session = deps._SessionLocal()
         local_store = SessionStore(db_session)
         try:
             await bus.publish(SSEEvent(
@@ -111,7 +111,7 @@ async def send_message(
 
 
 @router.post("/{message_id}/stop", status_code=204)
-async def stop_stream(message_id: int, student_id: int = Depends(current_student_id)):
+async def stop_stream(message_id: int, student_id: int = Depends(deps.current_student_id)):
     task = _streaming_tasks.get(message_id)
     if task is not None and not task.done():
         task.cancel()
