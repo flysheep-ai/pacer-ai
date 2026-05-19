@@ -37,6 +37,14 @@ function selectChat(sid: number): void {
   session.selectSession(sid)
   void router.push(`/chat/${sid}`)
 }
+
+async function deleteChat(sid: number): Promise<void> {
+  await session.deleteSession(sid)
+  if (session.currentSid === sid) {
+    chat.reset()
+    void router.push('/chat')
+  }
+}
 </script>
 
 <template>
@@ -73,6 +81,7 @@ function selectChat(sid: number): void {
       :key="s.id"
       :session="s"
       @click="selectChat(s.id)"
+      @delete="deleteChat(s.id)"
     />
 
     <div class="spacer" />
