@@ -101,6 +101,7 @@ html, body {
 .sidebar-btn.active { background: var(--surface); font-weight: 500; }
 .sidebar-btn svg { width: 18px; height: 18px; opacity: 0.5; flex-shrink: 0; }
 .sidebar-btn-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-section-label { font-size: 11px; color: var(--text-tertiary); padding: 14px 12px 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 .sidebar-spacer { flex: 1; }
 .sidebar-footer { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 2px; }
 .sidebar-footer-btn {
@@ -153,10 +154,10 @@ html, body {
 .msg-user .msg-bubble { background: var(--accent-light); color: var(--text-primary); border-bottom-right-radius: 6px; }
 .msg-assistant .msg-bubble { background: var(--surface); color: var(--text-primary); border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm); }
 
-.msg-agent-tag {
-  font-size: 11px; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--text-tertiary);
-  margin-bottom: 4px; padding: 0 4px;
+.msg-agent-badge {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px; padding: 0 4px; display: block;
 }
 
 .msg-bubble p { margin: 0 0 10px; }

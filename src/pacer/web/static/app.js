@@ -5,9 +5,11 @@ class PacerApp {
     this.currentSessionId = null;
     this.messages = [];
     this.eventSource = null;
+    this.fluidCanvas = document.getElementById('fluid-canvas');
     this.loginEl = document.getElementById('login-screen');
     this.chatEl = document.getElementById('chat-screen');
     this.messagesEl = document.getElementById('messages');
+    this.suggestionsEl = document.getElementById('suggestions');
     this.chatInput = document.getElementById('chat-input');
     this.sendBtn = document.getElementById('send-btn');
     this.sessionsList = document.getElementById('sessions-list');
@@ -15,6 +17,8 @@ class PacerApp {
     this.themeToggle = document.getElementById('theme-toggle');
     this.uploadBtn = document.getElementById('upload-btn');
     this.fileInput = document.getElementById('file-input');
+    this.logoutBtn = document.getElementById('logout-btn');
+    this.profileBtn = document.getElementById('profile-btn');
   }
 
   init() {
@@ -45,6 +49,8 @@ class PacerApp {
     this.themeToggle.addEventListener('click', () => this.toggleTheme());
     this.uploadBtn.addEventListener('click', () => this.fileInput.click());
     this.fileInput.addEventListener('change', e => this.handleUpload(e));
+    this.logoutBtn.addEventListener('click', () => this.logout());
+    this.profileBtn.addEventListener('click', () => this.toggleProfile());
   }
 
   initTheme() {
@@ -85,14 +91,46 @@ class PacerApp {
     }
   }
 
+  logout() {
+    if (this.eventSource) this.eventSource.close();
+    localStorage.removeItem('pacer_token');
+    localStorage.removeItem('pacer_student_id');
+    this.token = null;
+    this.studentId = null;
+    this.currentSessionId = null;
+    this.messages = [];
+    this.messagesEl.innerHTML = '';
+    this.showLogin();
+  }
+
   showLogin() {
     this.loginEl.style.display = 'flex';
     this.chatEl.style.display = 'none';
+    if (this.fluidCanvas) this.fluidCanvas.style.display = 'block';
   }
 
   showChat() {
     this.loginEl.style.display = 'none';
     this.chatEl.style.display = 'flex';
+    if (this.fluidCanvas) this.fluidCanvas.style.display = 'none';
+    this.loadProfile();
+  }
+
+  async loadProfile() {
+    try {
+      const resp = await fetch('/profile/', {
+        headers: { 'Authorization': `Bearer ${this.token}` },
+      });
+      if (resp.ok) {
+        const p = await resp.json();
+        const nameEl = document.getElementById('student-name');
+        if (nameEl) nameEl.textContent = p.name || '同学';
+      }
+    } catch (e) {}
+  }
+
+  toggleProfile() {
+    alert('学生信息面板将在后续版本上线');
   }
 
   connectSSE() {
@@ -114,6 +152,8 @@ class PacerApp {
     if (!text || !this.token) return;
     this.chatInput.value = '';
     this.chatInput.style.height = 'auto';
+    // Hide suggestions on first message
+    if (this.suggestionsEl) this.suggestionsEl.style.display = 'none';
     this.addMessage('user', text);
     this.showTyping();
     this.sendBtn.disabled = true;
@@ -124,10 +164,7 @@ class PacerApp {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.token}`,
         },
-        body: JSON.stringify({
-          text,
-          session_id: this.currentSessionId,
-        }),
+        body: JSON.stringify({ text, session_id: this.currentSessionId }),
       });
       const data = await resp.json();
       this.currentSessionId = data.session_id;
@@ -140,22 +177,20 @@ class PacerApp {
 
   addMessage(role, content, agent) {
     if (!content) return;
-    if (role === 'user' || role === 'assistant') {
-      this.messages.push({ role, content, agent });
-    }
+    this.messages.push({ role, content, agent });
     const el = document.createElement('div');
     el.className = `msg msg-${role}`;
-    const agentTag = agent && agent !== 'homeroom'
-      ? `<div class="msg-agent-tag">${this.agentLabel(agent)}</div>`
+    const tag = agent && agent !== 'homeroom'
+      ? `<span class="msg-agent-badge">${this.agentLabel(agent)}</span>`
       : '';
-    el.innerHTML = `${agentTag}<div class="msg-bubble">${this.simpleMarkdown(content)}</div>`;
+    el.innerHTML = `${tag}<div class="msg-bubble">${this.simpleMarkdown(content)}</div>`;
     this.messagesEl.appendChild(el);
-    this.messagesEl.parentElement.scrollTop = this.messagesEl.parentElement.scrollHeight;
+    const scroll = document.getElementById('chat-scroll');
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
   }
 
   agentLabel(agent) {
-    const map = { subject_teacher: '学科老师', mood_companion: '心态陪伴', homeroom: '班主任' };
-    return map[agent] || agent;
+    return { subject_teacher: '📚 学科老师', mood_companion: '💗 心态陪伴', homeroom: '' }[agent] || agent;
   }
 
   simpleMarkdown(text) {
@@ -164,7 +199,6 @@ class PacerApp {
       .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
   }
 
@@ -174,7 +208,8 @@ class PacerApp {
     el.id = 'typing-indicator';
     el.innerHTML = '<div class="msg-bubble typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
     this.messagesEl.appendChild(el);
-    this.messagesEl.parentElement.scrollTop = this.messagesEl.parentElement.scrollHeight;
+    const scroll = document.getElementById('chat-scroll');
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
   }
 
   hideTyping() {
@@ -191,6 +226,13 @@ class PacerApp {
     this.currentSessionId = null;
     this.messages = [];
     this.messagesEl.innerHTML = '';
+    if (this.suggestionsEl) this.suggestionsEl.style.display = 'flex';
+  }
+
+  handleSuggestion(text) {
+    if (this.suggestionsEl) this.suggestionsEl.style.display = 'none';
+    this.chatInput.value = text;
+    this.send();
   }
 
   async handleUpload(e) {
@@ -209,9 +251,11 @@ class PacerApp {
       const data = await resp.json();
       this.hideTyping();
       if (data.auto_filled_stem) {
-        this.chatInput.value = `${data.auto_filled_stem}`;
+        this.chatInput.value = data.auto_filled_stem;
         this.chatInput.focus();
-        this.addMessage('assistant', `识别为 ${data.auto_routed_to_subject || '未知'} 题目：\n${data.auto_filled_stem}\n\n你可以直接发送让我讲解。`, 'subject_teacher');
+        this.addMessage('assistant',
+          `识别为一道 ${data.auto_routed_to_subject || ''} 题：\n${data.auto_filled_stem}\n\n直接发送，我来讲解。`,
+          'subject_teacher');
       }
     } catch (e) {
       this.hideTyping();
