@@ -11,6 +11,7 @@ from pacer.api.routes.events import router as events_router
 from pacer.api.routes.internal import router as internal_router
 from pacer.api.routes.upload import router as upload_router
 from pacer.api.routes.profile import router as profile_router
+from pacer.api.routes.sessions import router as sessions_router
 from pacer.session.events import EventBus
 from pacer.skills.loader import SkillsLoader
 from pacer.config import get_settings
@@ -56,6 +57,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.include_router(internal_router)
     app.include_router(upload_router)
     app.include_router(profile_router)
+    app.include_router(sessions_router)
 
     # Static mounting MUST come after all include_router() calls — the SPA fallback
     # (/{full_path:path}) would otherwise shadow any later-registered API route.
