@@ -124,6 +124,7 @@ class MemoryEntry(Base):
     key: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     importance: Mapped[float] = mapped_column(Float, default=0.5)
+    embedding_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
