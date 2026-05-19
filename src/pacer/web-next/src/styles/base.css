@@ -1,0 +1,19 @@
+html, body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-900);
+  background: var(--paper-0);
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-thumb { background: var(--ink-300); border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+::selection { background: var(--accent-soft); color: var(--ink-900); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
