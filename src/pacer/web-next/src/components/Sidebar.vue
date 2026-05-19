@@ -61,6 +61,11 @@ function selectChat(sid: number): void {
         : '学习日报' }}
     </button>
 
+    <div class="section">页面</div>
+    <button class="row" type="button" @click="router.push('/me')">个人中心</button>
+    <button class="row" type="button" @click="router.push('/errors')">错题本</button>
+    <button class="row" type="button" @click="router.push('/plan')">学习计划</button>
+
     <div class="section">历史会话</div>
     <div v-if="session.loading" class="hint">…</div>
     <SidebarSessionItem

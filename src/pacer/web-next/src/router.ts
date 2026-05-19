@@ -11,6 +11,9 @@ export function createRouter(): Router {
       { path: '/', name: 'login', component: () => import('@/views/LoginView.vue') },
       { path: '/chat', name: 'chat', component: () => import('@/views/ChatView.vue') },
       { path: '/chat/:sid', name: 'chat-sid', component: () => import('@/views/ChatView.vue') },
+      { path: '/me', name: 'me', component: () => import('@/views/ProfileView.vue') },
+      { path: '/errors', name: 'errors', component: () => import('@/views/ErrorsView.vue') },
+      { path: '/plan', name: 'plan', component: () => import('@/views/PlanView.vue') },
       { path: '/:path(.*)*', redirect: '/' },
     ],
   })
