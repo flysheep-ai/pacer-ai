@@ -21,7 +21,7 @@ useAutoScroll(scrollEl, tick)
       <template v-else>
         <template v-for="(m, i) in chat.messages" :key="i">
           <UserMessage v-if="m.role === 'user'" :content="m.content" />
-          <AssistantMessage v-else :content="m.content" :agent="m.agent" />
+          <AssistantMessage v-else :content="m.content" :agent="m.agent" :streaming="m.streaming" :stop-reason="m.stopReason" />
         </template>
         <div v-if="chat.isAwaiting" class="typing" aria-label="正在输入">
           <span /><span /><span />

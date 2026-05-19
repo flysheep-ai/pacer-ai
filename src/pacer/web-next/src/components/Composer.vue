@@ -34,6 +34,10 @@ async function onSend(): Promise<void> {
   await chat.send(t)
 }
 
+async function onStop(): Promise<void> {
+  await chat.stopStreaming()
+}
+
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
@@ -112,6 +116,18 @@ async function onFile(e: Event): Promise<void> {
         @change="onFile"
       />
       <button
+        v-if="chat.isStreaming"
+        type="button"
+        class="stop-btn"
+        @click="onStop"
+        title="停止输出"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+          <rect x="6" y="6" width="12" height="12" rx="1"/>
+        </svg>
+      </button>
+      <button
+        v-else
         type="button"
         class="send"
         :disabled="chat.isAwaiting || !text.trim()"
@@ -166,4 +182,13 @@ async function onFile(e: Event): Promise<void> {
 .send:hover:not(:disabled) { opacity: 0.85; }
 .send:active:not(:disabled) { transform: scale(0.95); }
 .send:disabled { opacity: 0.35; cursor: default; }
+.stop-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--seal);
+  color: var(--paper-0);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: opacity var(--motion-fast);
+}
+.stop-btn:hover { opacity: 0.85; }
 </style>
