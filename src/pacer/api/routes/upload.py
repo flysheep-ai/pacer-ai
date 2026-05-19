@@ -3,6 +3,7 @@ import base64
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pacer.api.deps import current_student_id
 from pacer.tools.vision_tool import VisionUnderstandImageTool
+from pacer.config import get_settings
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -17,7 +18,8 @@ async def upload_image(
         raise HTTPException(status_code=400, detail="unsupported image type")
     content = await file.read()
     b64 = base64.b64encode(content).decode("ascii")
-    tool = VisionUnderstandImageTool(llm=request.app.state.llm, model="claude-sonnet-4-6")
+    settings = get_settings()
+    tool = VisionUnderstandImageTool(llm=request.app.state.llm, model=settings.main_model)
     result = await tool.execute(image_base64=b64, hint=None)
     return {
         "ocr_result": result,
