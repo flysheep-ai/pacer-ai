@@ -58,7 +58,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.app { display: flex; height: 100vh; overflow: hidden; }
+.app { display: flex; height: 100vh; overflow: hidden; background: var(--bg-primary); position: relative; z-index: 1; }
 
 /* === sidebar === */
 .sidebar {
