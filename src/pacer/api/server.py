@@ -57,6 +57,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.include_router(upload_router)
     app.include_router(profile_router)
 
+    # Static mounting MUST come after all include_router() calls — the SPA fallback
+    # (/{full_path:path}) would otherwise shadow any later-registered API route.
     if NEXT_DIST_DIR.exists():
         _mount_spa(app, NEXT_DIST_DIR)
     elif LEGACY_WEB_DIR.exists():
@@ -76,11 +78,13 @@ def _mount_legacy(app: FastAPI, web_dir: Path) -> None:
 
 
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
+    index_path = dist_dir / "index.html"
+    if not index_path.exists():
+        raise RuntimeError("web-next/dist/index.html missing — run `pnpm build`")
+
     assets_dir = dist_dir / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-
-    index_path = dist_dir / "index.html"
 
     @app.get("/", include_in_schema=False)
     async def spa_index():

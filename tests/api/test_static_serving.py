@@ -1,8 +1,5 @@
 from __future__ import annotations
 from pathlib import Path
-import shutil
-import tempfile
-import pytest
 from sqlalchemy import create_engine
 from fastapi.testclient import TestClient
 from pacer.api.server import create_app
@@ -63,5 +60,5 @@ def test_api_routes_not_shadowed_by_spa_fallback(monkeypatch, tmp_path):
     Base.metadata.create_all(create_engine(db_url))
     client = TestClient(create_app(database_url=db_url))
     r = client.post("/auth/login", json={"student_id": 999999, "pin": "wrong"})
-    assert r.status_code in (401, 404, 422)
+    assert r.status_code in (401, 422)
     assert "NEXT" not in r.text
