@@ -3,7 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from pacer.api.deps import get_db, current_student_id
+from pacer.api.deps import _SessionLocal, get_db, current_student_id
 from pacer.session.store import SessionStore
 from pacer.session.events import SSEEvent
 from pacer.llm.client import LLMMessage
@@ -62,6 +62,8 @@ async def send_message(
 
     async def run_stream():
         collected: list[str] = []
+        db_session = _SessionLocal()
+        local_store = SessionStore(db_session)
         try:
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_start",
@@ -71,7 +73,7 @@ async def send_message(
             async def on_delta(text: str):
                 collected.append(text)
                 # Persist each delta so SSE disconnect doesn't lose content
-                store.append_content_to_message(msg.id, text)
+                local_store.append_content_to_message(msg.id, text)
                 await bus.publish(SSEEvent(
                     student_id=student_id, event_type="assistant_delta",
                     data={"message_id": msg.id, "delta": text},
@@ -79,18 +81,27 @@ async def send_message(
 
             out = await orch.handle_streaming(req.text, history=history, on_delta=on_delta)
 
-            store.finalize_message(msg.id, content=out.final_text, status="done")
+            local_store.finalize_message(msg.id, content=out.final_text, status="done")
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_done",
                 data={"message_id": msg.id, "agent": out.agent_used, "stop_reason": "completed"},
             ))
         except asyncio.CancelledError:
-            store.finalize_message(msg.id, content="".join(collected), status="failed")
+            local_store.finalize_message(msg.id, content="".join(collected), status="failed")
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_done",
-                data={"message_id": msg.id, "stop_reason": "user_stopped"},
+                data={"message_id": msg.id, "agent": "homeroom", "stop_reason": "user_stopped"},
+            ))
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            local_store.finalize_message(msg.id, content="".join(collected), status="failed")
+            await bus.publish(SSEEvent(
+                student_id=student_id, event_type="assistant_done",
+                data={"message_id": msg.id, "agent": "homeroom", "stop_reason": "error"},
             ))
         finally:
+            db_session.close()
             _streaming_tasks.pop(msg.id, None)
 
     task = asyncio.create_task(run_stream())
