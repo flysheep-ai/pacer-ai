@@ -8,6 +8,7 @@ from pacer.orchestrator.router import RouterLLM, RouteDecision
 from pacer.agents.homeroom import build_homeroom_agent
 from pacer.agents.subject_teacher import build_subject_teacher_agent
 from pacer.agents.mood_companion import build_mood_agent
+from pacer.memory.persistent import PersistentMemory
 from pacer.agent.loop import AgentResult
 
 
@@ -59,7 +60,8 @@ class Orchestrator:
             )
             agent_used = "homeroom"
 
-        result = await agent.run(user_message, history=history)
+        recalled = self._recall_memories(user_message)
+        result = await agent.run(user_message, history=history, recalled_memory_block=recalled)
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
@@ -93,8 +95,25 @@ class Orchestrator:
             )
             agent_used = "homeroom"
 
-        result = await agent.run_streaming(user_message, history=history, on_delta=on_delta)
+        recalled = self._recall_memories(route_text)
+        result = await agent.run_streaming(user_message, history=history, on_delta=on_delta, recalled_memory_block=recalled)
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
         )
+
+    def _recall_memories(self, query: str) -> str | None:
+        """Search long-term memory for relevant entries and format as context block."""
+        try:
+            session = self.session_factory()
+            mem = PersistentMemory(session, self.student_id)
+            entries = mem.find_relevant(query, max_results=5)
+            if not entries:
+                return None
+            lines = ["<recalled-memories>"]
+            for e in entries:
+                lines.append(f"- [{e.type}] {e.key}: {e.content}")
+            lines.append("</recalled-memories>")
+            return "\n".join(lines)
+        except Exception:
+            return None
