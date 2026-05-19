@@ -2,6 +2,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 from openai import AsyncOpenAI
+import httpx
 from pacer.llm.client import LLMMessage, LLMResponse, StreamChunk
 
 
@@ -28,7 +29,11 @@ class OpenAICompatClient:
     """
 
     def __init__(self, api_key: str, base_url: str, model: str, max_tokens: int = 4096):
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=httpx.AsyncClient(proxy=None),
+        )
         self.model = model
         self.max_tokens = max_tokens
 
