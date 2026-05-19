@@ -15,7 +15,8 @@ from pacer.session.events import EventBus
 from pacer.skills.loader import SkillsLoader
 from pacer.config import get_settings
 
-WEB_DIR = Path(__file__).parent.parent / "web"
+LEGACY_WEB_DIR = Path(__file__).parent.parent / "web"
+NEXT_DIST_DIR = Path(__file__).parent.parent / "web-next" / "dist"
 
 
 def _create_llm_client(settings):
@@ -28,10 +29,7 @@ def _create_llm_client(settings):
         )
     else:
         from pacer.llm.client import LLMClient
-        return LLMClient(
-            api_key=settings.llm_api_key,
-            model=settings.main_model,
-        )
+        return LLMClient(api_key=settings.llm_api_key, model=settings.main_model)
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
@@ -59,10 +57,35 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.include_router(upload_router)
     app.include_router(profile_router)
 
-    if WEB_DIR.exists():
-        app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
+    if NEXT_DIST_DIR.exists():
+        _mount_spa(app, NEXT_DIST_DIR)
+    elif LEGACY_WEB_DIR.exists():
+        _mount_legacy(app, LEGACY_WEB_DIR)
 
-        @app.get("/", include_in_schema=False)
-        async def index():
-            return FileResponse(str(WEB_DIR / "index.html"))
     return app
+
+
+def _mount_legacy(app: FastAPI, web_dir: Path) -> None:
+    static_dir = web_dir / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def legacy_index():
+        return FileResponse(str(web_dir / "index.html"))
+
+
+def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
+    assets_dir = dist_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    index_path = dist_dir / "index.html"
+
+    @app.get("/", include_in_schema=False)
+    async def spa_index():
+        return FileResponse(str(index_path))
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        return FileResponse(str(index_path))
