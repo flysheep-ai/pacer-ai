@@ -1,24 +1,21 @@
 /**
  * Fluid Particle Background — WebGL curl-noise flow field.
  *
- * Design intent: calm, intelligent, "AI is thinking" atmosphere.
- * Not a tech demo. Not sci-fi. Soft, quiet, breathing.
- *
- * Technique:
- *   - Curl noise on a 2D simplicial-like grid drives particle velocity
- *   - Particles are rendered as soft gaussian splats via fragment shader
- *   - Mouse creates a subtle low-pressure zone (gentle attraction, not chase)
- *   - All colours are low-saturation greys / cool blues
+ * Calm, quiet, "AI is thinking" atmosphere.
+ * GPU-rendered point sprites driven by a 2D curl-noise velocity field.
+ * Mouse creates a subtle low-pressure disturbance (not chase behaviour).
  */
 class FluidBackground {
   constructor(canvas) {
     this.canvas = canvas;
     this.gl = null;
-    this.particleCount = 280;
-    this.mouse = { x: -9999, y: -9999, targetX: 0.5, targetY: 0.5 };
+    this.particleCount = 240;
+    this.mouse = { tx: 0.5, ty: 0.5 };
     this.time = 0;
+    this._lastTime = 0;
     this.rafId = null;
-    this.isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    this._attribs = {};   // cached attribute locations
+    this._bufs = {};       // cached buffer objects
     this._init();
   }
 
@@ -26,229 +23,199 @@ class FluidBackground {
     const gl = this.canvas.getContext('webgl', {
       alpha: true,
       antialias: false,
+      premultipliedAlpha: false,
       powerPreference: 'high-performance',
     });
-    if (!gl) return;
+    if (!gl) { console.warn('WebGL not available'); return; }
     this.gl = gl;
 
     this._resize();
-    this._createProgram();
-    this._createParticles();
+    if (!this._buildProgram()) { console.warn('shader compile failed'); return; }
+    this._initParticles();
     this._bindEvents();
     this._loop();
   }
 
+  // ─── resize ─────────────────────────────────────────────
+
   _resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x for perf
-    this.canvas.width = this.canvas.clientWidth * dpr;
-    this.canvas.height = this.canvas.clientHeight * dpr;
-    if (this.gl) {
-      this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = this.canvas.clientWidth * dpr;
+    const h = this.canvas.clientHeight * dpr;
+    if (this.canvas.width === w && this.canvas.height === h) return;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    if (this.gl) this.gl.viewport(0, 0, w, h);
   }
 
-  // ─── shaders ────────────────────────────────────────────
+  // ─── shader program ─────────────────────────────────────
 
-  _createProgram() {
+  _compile(gl, type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.warn('shader error:', gl.getShaderInfoLog(s));
+      gl.deleteShader(s);
+      return null;
+    }
+    return s;
+  }
+
+  _buildProgram() {
     const gl = this.gl;
 
-    // ── vertex shader ──
-    // Renders each particle as a camera-facing point sprite.
-    const vs = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vs, /* glsl */`
+    const vs = this._compile(gl, gl.VERTEX_SHADER, `
       precision highp float;
       attribute vec2 aPos;
       attribute float aSize;
       attribute float aAlpha;
       uniform vec2 uRes;
-      uniform float uPointScale;
+      uniform float uPtScale;
       varying float vAlpha;
-      varying float vSize;
       void main() {
         vec2 ndc = aPos * 2.0 - 1.0;
-        ndc.y *= -1.0; // flip Y
-        gl_Position = vec4(ndc, 0.0, 1.0);
-        gl_PointSize = aSize * uPointScale;
+        gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
+        gl_PointSize = aSize * uPtScale;
         vAlpha = aAlpha;
-        vSize = aSize;
       }
     `);
-    gl.compileShader(vs);
+    if (!vs) return false;
 
-    // ── fragment shader ──
-    // Soft gaussian-like splat. No hard edges.
-    const fs = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fs, /* glsl */`
+    const fs = this._compile(gl, gl.FRAGMENT_SHADER, `
       precision highp float;
       varying float vAlpha;
-      varying float vSize;
       uniform vec3 uColor;
       void main() {
         float d = length(gl_PointCoord - 0.5) * 2.0;
-        // Gaussian falloff — soft, no visible edge
-        float alpha = vAlpha * exp(-d * d * 3.5);
-        alpha *= smoothstep(1.0, 0.7, d); // smooth cut at edge
-        alpha = clamp(alpha, 0.0, 1.0);
-        gl_FragColor = vec4(uColor, alpha);
+        float alpha = vAlpha * exp(-d * d * 4.0);
+        alpha *= smoothstep(1.0, 0.6, d);
+        gl_FragColor = vec4(uColor, clamp(alpha, 0.0, 1.0));
       }
     `);
-    gl.compileShader(fs);
+    if (!fs) return false;
 
-    // ── program ──
-    const program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    gl.useProgram(program);
+    const pg = gl.createProgram();
+    gl.attachShader(pg, vs);
+    gl.attachShader(pg, fs);
+    gl.linkProgram(pg);
+    if (!gl.getProgramParameter(pg, gl.LINK_STATUS)) {
+      console.warn('program link error:', gl.getProgramInfoLog(pg));
+      return false;
+    }
+    gl.useProgram(pg);
 
-    this.program = program;
-    this.uRes = gl.getUniformLocation(program, 'uRes');
-    this.uPointScale = gl.getUniformLocation(program, 'uPointScale');
-    this.uColor = gl.getUniformLocation(program, 'uColor');
+    this.program = pg;
+    this._attribs.aPos   = gl.getAttribLocation(pg, 'aPos');
+    this._attribs.aSize  = gl.getAttribLocation(pg, 'aSize');
+    this._attribs.aAlpha = gl.getAttribLocation(pg, 'aAlpha');
+    this._attribs.uRes    = gl.getUniformLocation(pg, 'uRes');
+    this._attribs.uPtScale = gl.getUniformLocation(pg, 'uPtScale');
+    this._attribs.uColor  = gl.getUniformLocation(pg, 'uColor');
 
-    // Blending — additive but very subtle (low alpha per particle)
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
+    return true;
   }
 
   // ─── particles ──────────────────────────────────────────
 
-  _createParticles() {
+  _initParticles() {
     const gl = this.gl;
     const N = this.particleCount;
-
-    // Initialise positions clustered in the upper-centre area
-    // so the background has breathing room at edges.
-    const positions = new Float32Array(N * 2);
-    const velocities = new Float32Array(N * 2); // stored as [0,1] space
-    const sizes = new Float32Array(N);
-    const alphas = new Float32Array(N);
+    const pos = new Float32Array(N * 2);
+    const vel = new Float32Array(N * 2);
+    const sz  = new Float32Array(N);
+    const al  = new Float32Array(N);
 
     for (let i = 0; i < N; i++) {
-      // Bias toward upper-centre (like subtle light source)
-      const cx = 0.5 + (Math.random() - 0.5) * 0.6;
-      const cy = 0.35 + (Math.random() - 0.5) * 0.5;
-      positions[i * 2] = Math.max(0.02, Math.min(0.98, cx));
-      positions[i * 2 + 1] = Math.max(0.02, Math.min(0.98, cy));
-      velocities[i * 2] = 0;
-      velocities[i * 2 + 1] = 0;
-      sizes[i] = 10 + Math.random() * 50;
-      alphas[i] = 0.12 + Math.random() * 0.18;
+      pos[i*2]   = 0.5 + (Math.random() - 0.5) * 0.7;
+      pos[i*2+1] = 0.35 + (Math.random() - 0.5) * 0.55;
+      vel[i*2] = vel[i*2+1] = 0;
+      sz[i] = 8 + Math.random() * 60;
+      al[i] = 0.10 + Math.random() * 0.16;
     }
 
-    this.positions = positions;
-    this.velocities = velocities;
-    this.sizes = sizes;
-    this.alphas = alphas;
+    this.positions = pos;
+    this.velocities = vel;
+    this.sizes = sz;
+    this.alphas = al;
 
-    // Upload static attributes
-    const posBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
-    const aPos = gl.getAttribLocation(this.program, 'aPos');
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-    const sizeBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
-    const aSize = gl.getAttribLocation(this.program, 'aSize');
-    gl.enableVertexAttribArray(aSize);
-    gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 0, 0);
-
-    const alphaBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, alphas, gl.STATIC_DRAW);
-    const aAlpha = gl.getAttribLocation(this.program, 'aAlpha');
-    gl.enableVertexAttribArray(aAlpha);
-    gl.vertexAttribPointer(aAlpha, 1, gl.FLOAT, false, 0, 0);
+    // Create persistent buffers
+    this._bufs.pos = this._makeBuf(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW);
+    this._bufs.sz  = this._makeBuf(gl.ARRAY_BUFFER, sz, gl.STATIC_DRAW);
+    this._bufs.al  = this._makeBuf(gl.ARRAY_BUFFER, al, gl.STATIC_DRAW);
   }
 
-  // ─── curl noise (simplicial-like) ───────────────────────
-
-  /** Hash function for noise. Returns pseudo-random 2D vector. */
-  _hash(p) {
-    // From https://www.shadertoy.com/view/4djSRW (Markus Kummer)
-    const h = [p[0] * 127.1 + p[1] * 311.7, p[0] * 269.5 + p[1] * 183.3];
-    const s = Math.sin(h[0]) * 43758.5453 + Math.sin(h[1]) * 43758.5453;
-    const r = (s - Math.floor(s)) * 2.0 - 1.0;
-    return [
-      Math.sin(r * 6.283) * 0.5 + 0.5,
-      Math.cos(r * 6.283) * 0.5 + 0.5,
-    ];
+  _makeBuf(target, data, usage) {
+    const gl = this.gl;
+    const b = gl.createBuffer();
+    gl.bindBuffer(target, b);
+    gl.bufferData(target, data, usage);
+    return b;
   }
 
-  /** Smooth noise at point p. */
-  _noise(p) {
-    const i = [Math.floor(p[0]), Math.floor(p[1])];
-    const f = [p[0] - i[0], p[1] - i[1]];
-    // Smoothstep
-    const u = [f[0] * f[0] * (3.0 - 2.0 * f[0]), f[1] * f[1] * (3.0 - 2.0 * f[1])];
-    const n00 = this._hash([i[0], i[1]]);
-    const n10 = this._hash([i[0] + 1, i[1]]);
-    const n01 = this._hash([i[0], i[1] + 1]);
-    const n11 = this._hash([i[0] + 1, i[1] + 1]);
-    const nx0 = n00[0] * (1 - u[0]) + n10[0] * u[0];
-    const nx1 = n01[0] * (1 - u[0]) + n11[0] * u[0];
-    return nx0 * (1 - u[1]) + nx1 * u[1];
+  // ─── curl noise ─────────────────────────────────────────
+
+  _hash2(x, y) {
+    // PCG-like hash returning [0,1)
+    let h = (x * 374761393 + y * 668265263) >>> 0;
+    h = ((h ^ (h >> 13)) * 1274126177) >>> 0;
+    return (h ^ (h >> 16)) / 4294967296;
   }
 
-  /** Curl of a 2D noise field. Returns divergence-free velocity. */
+  _noise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+    const a = this._hash2(ix, iy);
+    const b = this._hash2(ix + 1, iy);
+    const c = this._hash2(ix, iy + 1);
+    const d = this._hash2(ix + 1, iy + 1);
+    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+  }
+
   _curl(x, y, t) {
-    const eps = 0.01;
-    const n1 = this._noise([x + eps, y + t * 0.02]);
-    const n2 = this._noise([x - eps, y + t * 0.02]);
-    const n3 = this._noise([x + t * 0.02, y + eps]);
-    const n4 = this._noise([x + t * 0.02, y - eps]);
-    // curl = (dFy/dx - dFx/dy) → in 2D: velocity = (dN/dy, -dN/dx)
-    return [
-      (n3 - n4) / (2 * eps),
-      -(n1 - n2) / (2 * eps),
-    ];
+    const e = 0.008;
+    const n1 = this._noise(x + e, y + t);
+    const n2 = this._noise(x - e, y + t);
+    const n3 = this._noise(x + t, y + e);
+    const n4 = this._noise(x + t, y - e);
+    // 2D curl: (d/dy, -d/dx)
+    return [(n3 - n4) / (2*e), -(n1 - n2) / (2*e)];
   }
 
   // ─── update ─────────────────────────────────────────────
 
   _update(dt) {
     const N = this.particleCount;
-    const pos = this.positions;
-    const vel = this.velocities;
+    const p = this.positions;
+    const v = this.velocities;
     const t = this.time;
-
-    // Smooth mouse target
-    const mx = this.mouse.targetX;
-    const my = this.mouse.targetY;
+    const mx = this.mouse.tx, my = this.mouse.ty;
+    const baseSpeed = 0.00018 * Math.min(dt, 33);
 
     for (let i = 0; i < N; i++) {
-      const px = pos[i * 2];
-      const py = pos[i * 2 + 1];
+      const px = p[i*2], py = p[i*2+1];
+      const [cvx, cvy] = this._curl(px * 2.8, py * 2.8, t * 0.12);
 
-      // Curl noise field velocity — base flow
-      const [cvx, cvy] = this._curl(px * 3.0, py * 3.0, t * 0.15);
+      // Gentle mouse repulsion
+      const dx = px - mx, dy = py - my;
+      const d2 = dx*dx + dy*dy + 0.005;
+      const mf = 0.00004 / (d2 * d2); // falls off with r⁴ — very local
 
-      // Subtle mouse influence — gentle low-pressure zone (not chase)
-      const dx = px - mx;
-      const dy = py - my;
-      const dist = Math.sqrt(dx * dx + dy * dy) + 0.001;
-      const mouseForce = 0.00006 / (dist * dist + 0.01); // inverse-square, capped
-      const mxInfluence = dx / dist * mouseForce;
-      const myInfluence = dy / dist * mouseForce;
+      v[i*2]   = cvx * baseSpeed + dx / (Math.sqrt(d2) + 1e-6) * mf * dt * 0.02;
+      v[i*2+1] = cvy * baseSpeed + dy / (Math.sqrt(d2) + 1e-6) * mf * dt * 0.02;
 
-      // Combine forces. Curl noise drives primary motion; mouse adds subtle disturbance.
-      const speed = 0.00025 * dt;
-      vel[i * 2] = cvx * speed + mxInfluence * dt * 0.03;
-      vel[i * 2 + 1] = cvy * speed + myInfluence * dt * 0.03;
+      p[i*2]   += v[i*2];
+      p[i*2+1] += v[i*2+1];
 
-      // Integrate
-      pos[i * 2] += vel[i * 2];
-      pos[i * 2 + 1] += vel[i * 2 + 1];
-
-      // Wrap-around with soft fade — keeps particles in a gentle band
-      if (pos[i * 2] < -0.05) pos[i * 2] = 1.05;
-      if (pos[i * 2] > 1.05) pos[i * 2] = -0.05;
-      if (pos[i * 2 + 1] < -0.05) pos[i * 2 + 1] = 1.05;
-      if (pos[i * 2 + 1] > 1.05) pos[i * 2 + 1] = -0.05;
+      if (p[i*2] < -0.08) p[i*2] = 1.08;
+      if (p[i*2] > 1.08) p[i*2] = -0.08;
+      if (p[i*2+1] < -0.08) p[i*2+1] = 1.08;
+      if (p[i*2+1] > 1.08) p[i*2+1] = -0.08;
     }
   }
 
@@ -256,111 +223,67 @@ class FluidBackground {
 
   _render() {
     const gl = this.gl;
+    const a = this._attribs;
+
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.useProgram(this.program);
-
-    // Update position buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.getAttribLocation(this.program, 'aPos') !== -1
-      ? gl.createBuffer() : gl.createBuffer());
-    // Actually, just rebind the existing buffer
-    const aPosLoc = gl.getAttribLocation(this.program, 'aPos');
-    // Re-upload positions
-    const allBufs = gl.getParameter(gl.ARRAY_BUFFER_BINDING);
-    // Create a fresh upload each frame (pragmatic for dynamic data)
-    const dynBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
+    // Upload dynamic position buffer (reuse)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._bufs.pos);
     gl.bufferData(gl.ARRAY_BUFFER, this.positions, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(aPosLoc);
-    gl.vertexAttribPointer(aPosLoc, 2, gl.FLOAT, false, 0, 0);
-    // Re-bind size & alpha (their attrib locations may have been lost after re-bind)
-    const aSizeLoc = gl.getAttribLocation(this.program, 'aSize');
-    const sizeBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.sizes, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(aSizeLoc);
-    gl.vertexAttribPointer(aSizeLoc, 1, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(a.aPos);
+    gl.vertexAttribPointer(a.aPos, 2, gl.FLOAT, false, 0, 0);
 
-    const aAlphaLoc = gl.getAttribLocation(this.program, 'aAlpha');
-    const alphaBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.alphas, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(aAlphaLoc);
-    gl.vertexAttribPointer(aAlphaLoc, 1, gl.FLOAT, false, 0, 0);
+    // Bind static size buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._bufs.sz);
+    gl.enableVertexAttribArray(a.aSize);
+    gl.vertexAttribPointer(a.aSize, 1, gl.FLOAT, false, 0, 0);
 
-    gl.uniform2f(this.uRes, this.canvas.width, this.canvas.height);
-    gl.uniform1f(this.uPointScale, this.canvas.height / 2.0);
+    // Bind static alpha buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._bufs.al);
+    gl.enableVertexAttribArray(a.aAlpha);
+    gl.vertexAttribPointer(a.aAlpha, 1, gl.FLOAT, false, 0, 0);
 
-    // Colour — muted cool-grey, shifts subtly with dark/light mode
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-      gl.uniform3f(this.uColor, 0.58, 0.65, 0.78); // soft cool blue-grey
-    } else {
-      gl.uniform3f(this.uColor, 0.45, 0.50, 0.60); // warm grey-blue
-    }
+    gl.uniform2f(a.uRes, this.canvas.width, this.canvas.height);
+    gl.uniform1f(a.uPtScale, this.canvas.height / 2.2);
+
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    gl.uniform3f(a.uColor, dark ? 0.60 : 0.44, dark ? 0.66 : 0.50, dark ? 0.76 : 0.58);
 
     gl.drawArrays(gl.POINTS, 0, this.particleCount);
-
-    // Clean up temp buffers (WebGL will GC unreferenced buffers)
-    gl.deleteBuffer(dynBuf);
-    gl.deleteBuffer(sizeBuf);
-    gl.deleteBuffer(alphaBuf);
   }
 
   // ─── events ─────────────────────────────────────────────
 
   _bindEvents() {
+    // Mouse tracking on window (not canvas — keeps form clickable)
+    window.addEventListener('mousemove', (e) => {
+      this.mouse.tx = e.clientX / window.innerWidth;
+      this.mouse.ty = 1.0 - e.clientY / window.innerHeight;
+    });
     window.addEventListener('resize', () => this._resize());
-    this.canvas.addEventListener('mousemove', (e) => {
-      const rect = this.canvas.getBoundingClientRect();
-      this.mouse.targetX = (e.clientX - rect.left) / rect.width;
-      this.mouse.targetY = 1.0 - (e.clientY - rect.top) / rect.height;
-    });
-    this.canvas.addEventListener('mouseleave', () => {
-      this.mouse.targetX = 0.5;
-      this.mouse.targetY = 0.5;
-    });
-    // Touch support
-    this.canvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) {
-        const rect = this.canvas.getBoundingClientRect();
-        this.mouse.targetX = (e.touches[0].clientX - rect.left) / rect.width;
-        this.mouse.targetY = 1.0 - (e.touches[0].clientY - rect.top) / rect.height;
-      }
-    }, { passive: true });
-    // Theme changes
-    new MutationObserver(() => {
-      this.isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
 
   // ─── loop ───────────────────────────────────────────────
 
   _loop() {
     const now = performance.now();
-    const dt = Math.min(now - (this._lastTime || now), 50); // cap at 50ms
+    const dt = Math.min(now - this._lastTime, 50);
     this._lastTime = now;
     this.time += dt * 0.001;
-
     this._update(dt);
     this._render();
-
     this.rafId = requestAnimationFrame(() => this._loop());
   }
 
   destroy() {
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    if (this.gl) {
-      this.gl.getExtension('WEBGL_lose_context')?.loseContext();
-    }
+    cancelAnimationFrame(this.rafId);
+    if (this.gl) this.gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 }
 
-// ─── auto-init when DOM ready ─────────────────────────────
+// Auto-init
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('fluid-canvas');
-  if (canvas) {
-    new FluidBackground(canvas);
-  }
+  if (canvas) new FluidBackground(canvas);
 });
