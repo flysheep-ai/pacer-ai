@@ -109,6 +109,7 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20))
     agent: Mapped[Optional[str]] = mapped_column(String(30))
     content: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="done", server_default="done")
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
