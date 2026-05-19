@@ -1,70 +1,23 @@
-class PacerApp {
-  constructor() {
-    this.token = localStorage.getItem('pacer_token');
-    this.studentId = localStorage.getItem('pacer_student_id');
-    this.currentSessionId = null;
-    this.messages = [];
-    this.eventSource = null;
-    this.fluidCanvas = document.getElementById('fluid-canvas');
-    this.loginEl = document.getElementById('login-screen');
-    this.chatEl = document.getElementById('chat-screen');
-    this.messagesEl = document.getElementById('messages');
-    this.suggestionsEl = document.getElementById('suggestions');
-    this.chatInput = document.getElementById('chat-input');
-    this.sendBtn = document.getElementById('send-btn');
-    this.sessionsList = document.getElementById('sessions-list');
-    this.newChatBtn = document.getElementById('new-chat-btn');
-    this.themeToggle = document.getElementById('theme-toggle');
-    this.uploadBtn = document.getElementById('upload-btn');
-    this.fileInput = document.getElementById('file-input');
-    this.logoutBtn = document.getElementById('logout-btn');
-    this.profileBtn = document.getElementById('profile-btn');
-  }
+// pacer-ai frontend — static methods, all onclick-driven. No event listener spaghetti.
+const Pacer = {
+  token: localStorage.getItem('pacer_token') || null,
+  studentId: localStorage.getItem('pacer_student_id') || null,
+  sessionId: null,
+  eventSource: null,
+
+  // ─── init ───────────────────────────────────────────────
 
   init() {
     if (this.token) {
-      this.connectSSE();
-      this.showChat();
+      this._showChat();
+      this._connectSSE();
     } else {
-      this.showLogin();
+      this._showLogin();
     }
-    this.bindEvents();
-    this.initTheme();
-  }
+    this._initTheme();
+  },
 
-  bindEvents() {
-    document.getElementById('login-form').addEventListener('submit', e => {
-      e.preventDefault();
-      this.login();
-    });
-    this.sendBtn.addEventListener('click', () => this.send());
-    this.chatInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.send();
-      }
-    });
-    this.chatInput.addEventListener('input', () => this.autoGrow());
-    this.newChatBtn.addEventListener('click', () => this.newSession());
-    this.themeToggle.addEventListener('click', () => this.toggleTheme());
-    this.uploadBtn.addEventListener('click', () => this.fileInput.click());
-    this.fileInput.addEventListener('change', e => this.handleUpload(e));
-    this.logoutBtn.addEventListener('click', () => this.logout());
-    this.profileBtn.addEventListener('click', () => this.toggleProfile());
-  }
-
-  initTheme() {
-    const saved = localStorage.getItem('pacer_theme');
-    if (saved === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-  }
-
-  toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('pacer_theme', isDark ? 'light' : 'dark');
-  }
+  // ─── login / logout ────────────────────────────────────
 
   async login() {
     const sid = document.getElementById('login-student-id').value.trim();
@@ -72,24 +25,21 @@ class PacerApp {
     if (!sid || !pin) return;
     try {
       const resp = await fetch('/auth/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: parseInt(sid), pin }),
       });
-      if (!resp.ok) {
-        alert('登录失败，请检查学号和密码');
-        return;
-      }
+      if (!resp.ok) { alert('登录失败'); return; }
       const data = await resp.json();
       this.token = data.token;
       this.studentId = data.student_id;
       localStorage.setItem('pacer_token', this.token);
       localStorage.setItem('pacer_student_id', this.studentId);
-      this.connectSSE();
-      this.showChat();
-    } catch (e) {
-      alert('连接失败: ' + e.message);
-    }
-  }
+      this._showChat();
+      this._connectSSE();
+      this._loadName();
+    } catch (e) { alert('连接失败: ' + e.message); }
+  },
 
   logout() {
     if (this.eventSource) this.eventSource.close();
@@ -97,175 +47,178 @@ class PacerApp {
     localStorage.removeItem('pacer_student_id');
     this.token = null;
     this.studentId = null;
-    this.currentSessionId = null;
-    this.messages = [];
-    this.messagesEl.innerHTML = '';
-    this.showLogin();
-  }
+    this.sessionId = null;
+    document.getElementById('messages').innerHTML = '';
+    this._showLogin();
+  },
 
-  showLogin() {
-    this.loginEl.style.display = 'flex';
-    this.chatEl.style.display = 'none';
-    if (this.fluidCanvas) this.fluidCanvas.style.display = 'block';
-  }
+  // ─── theme ─────────────────────────────────────────────
 
-  showChat() {
-    this.loginEl.style.display = 'none';
-    this.chatEl.style.display = 'flex';
-    if (this.fluidCanvas) this.fluidCanvas.style.display = 'none';
-    this.loadProfile();
-  }
+  _initTheme() {
+    if (localStorage.getItem('pacer_theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  },
 
-  async loadProfile() {
+  toggleTheme() {
+    const is = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', is ? 'light' : 'dark');
+    localStorage.setItem('pacer_theme', is ? 'light' : 'dark');
+  },
+
+  // ─── screen toggle ─────────────────────────────────────
+
+  _showLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('chat-screen').style.display = 'none';
+    const c = document.getElementById('fluid-canvas');
+    if (c) c.style.display = 'block';
+  },
+
+  _showChat() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('chat-screen').style.display = 'flex';
+    const c = document.getElementById('fluid-canvas');
+    if (c) c.style.display = 'none';
+  },
+
+  async _loadName() {
     try {
-      const resp = await fetch('/profile/', {
-        headers: { 'Authorization': `Bearer ${this.token}` },
-      });
-      if (resp.ok) {
-        const p = await resp.json();
-        const nameEl = document.getElementById('student-name');
-        if (nameEl) nameEl.textContent = p.name || '同学';
+      const r = await fetch('/profile/', { headers: { 'Authorization': 'Bearer ' + this.token } });
+      if (r.ok) {
+        const p = await r.json();
+        document.getElementById('header-name').textContent = (p.name || '同学') + ' · pacer';
       }
     } catch (e) {}
-  }
+  },
 
-  toggleProfile() {
-    alert('学生信息面板将在后续版本上线');
-  }
+  // ─── SSE ───────────────────────────────────────────────
 
-  connectSSE() {
+  _connectSSE() {
     if (this.eventSource) this.eventSource.close();
-    this.eventSource = new EventSource(`/events/stream?token=${encodeURIComponent(this.token)}`);
+    this.eventSource = new EventSource('/events/stream?token=' + encodeURIComponent(this.token));
     this.eventSource.addEventListener('assistant_message', e => {
-      const data = JSON.parse(e.data);
-      this.addMessage('assistant', data.text, data.agent);
-      this.hideTyping();
+      const d = JSON.parse(e.data);
+      this._addMsg('assistant', d.text, d.agent);
+      this._hideTyping();
     });
     this.eventSource.addEventListener('ping', () => {});
-    this.eventSource.onerror = () => {
-      setTimeout(() => this.connectSSE(), 3000);
-    };
-  }
+    this.eventSource.onerror = () => setTimeout(() => this._connectSSE(), 3000);
+  },
+
+  // ─── send ──────────────────────────────────────────────
 
   async send() {
-    const text = this.chatInput.value.trim();
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
     if (!text || !this.token) return;
-    this.chatInput.value = '';
-    this.chatInput.style.height = 'auto';
-    // Hide suggestions on first message
-    if (this.suggestionsEl) this.suggestionsEl.style.display = 'none';
-    this.addMessage('user', text);
-    this.showTyping();
-    this.sendBtn.disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+
+    const es = document.getElementById('empty-state');
+    if (es) es.style.display = 'none';
+
+    this._addMsg('user', text);
+    this._showTyping();
+    document.getElementById('send-btn').disabled = true;
+
     try {
-      const resp = await fetch('/message/send', {
+      const r = await fetch('/message/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
-        },
-        body: JSON.stringify({ text, session_id: this.currentSessionId }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({ text, session_id: this.sessionId }),
       });
-      const data = await resp.json();
-      this.currentSessionId = data.session_id;
+      const d = await r.json();
+      this.sessionId = d.session_id;
     } catch (e) {
-      this.hideTyping();
-      this.addMessage('assistant', '出错了，请稍后重试。');
+      this._hideTyping();
+      this._addMsg('assistant', '出错了，请稍后重试。');
     }
-    this.sendBtn.disabled = false;
-  }
+    document.getElementById('send-btn').disabled = false;
+  },
 
-  addMessage(role, content, agent) {
-    if (!content) return;
-    this.messages.push({ role, content, agent });
-    const el = document.createElement('div');
-    el.className = `msg msg-${role}`;
-    const tag = agent && agent !== 'homeroom'
-      ? `<span class="msg-agent-badge">${this.agentLabel(agent)}</span>`
-      : '';
-    el.innerHTML = `${tag}<div class="msg-bubble">${this.simpleMarkdown(content)}</div>`;
-    this.messagesEl.appendChild(el);
-    const scroll = document.getElementById('chat-scroll');
-    if (scroll) scroll.scrollTop = scroll.scrollHeight;
-  }
-
-  agentLabel(agent) {
-    return { subject_teacher: '📚 学科老师', mood_companion: '💗 心态陪伴', homeroom: '' }[agent] || agent;
-  }
-
-  simpleMarkdown(text) {
-    return text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-  }
-
-  showTyping() {
-    const el = document.createElement('div');
-    el.className = 'msg msg-assistant';
-    el.id = 'typing-indicator';
-    el.innerHTML = '<div class="msg-bubble typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-    this.messagesEl.appendChild(el);
-    const scroll = document.getElementById('chat-scroll');
-    if (scroll) scroll.scrollTop = scroll.scrollHeight;
-  }
-
-  hideTyping() {
-    const el = document.getElementById('typing-indicator');
-    if (el) el.remove();
-  }
-
-  autoGrow() {
-    this.chatInput.style.height = 'auto';
-    this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 180) + 'px';
-  }
-
-  newSession() {
-    this.currentSessionId = null;
-    this.messages = [];
-    this.messagesEl.innerHTML = '';
-    if (this.suggestionsEl) this.suggestionsEl.style.display = 'flex';
-  }
-
-  handleSuggestion(text) {
-    if (this.suggestionsEl) this.suggestionsEl.style.display = 'none';
-    this.chatInput.value = text;
+  sendPreset(text) {
+    document.getElementById('chat-input').value = text;
     this.send();
-  }
+  },
 
-  async handleUpload(e) {
-    const file = e.target.files[0];
+  newChat() {
+    this.sessionId = null;
+    const msgs = document.getElementById('messages');
+    msgs.innerHTML = `<div id="empty-state" class="empty-state">
+      <div class="empty-state-icon">☀️</div><h1>新对话</h1><p>有什么想聊的？</p>
+      <div class="suggestions">
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我讲一道导数题')">📐 讲一道导数题</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我制定今天的学习计划')">📋 今日学习计划</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('帮我分析一下这道错题')">📝 分析错题</button>
+        <button class="suggestion" onclick="Pacer.sendPreset('最近有点焦虑，想聊聊')">💭 聊聊压力</button>
+      </div></div>`;
+  },
+
+  // ─── messages ──────────────────────────────────────────
+
+  _addMsg(role, content, agent) {
+    if (!content) return;
+    const div = document.createElement('div');
+    div.className = 'msg msg-' + role;
+    let tag = '';
+    if (agent === 'subject_teacher') tag = '<span class="msg-agent-badge">📚 学科老师</span>';
+    if (agent === 'mood_companion') tag = '<span class="msg-agent-badge">💗 心态陪伴</span>';
+    div.innerHTML = tag + '<div class="msg-bubble">' + this._md(content) + '</div>';
+    document.getElementById('messages').appendChild(div);
+    const sc = document.getElementById('chat-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
+  },
+
+  _md(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\n/g,'<br>');
+  },
+
+  _showTyping() {
+    const d = document.createElement('div');
+    d.className = 'msg msg-assistant';
+    d.id = 'typing';
+    d.innerHTML = '<div class="msg-bubble typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+    document.getElementById('messages').appendChild(d);
+    const sc = document.getElementById('chat-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
+  },
+
+  _hideTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  },
+
+  // ─── upload ────────────────────────────────────────────
+
+  async upload(input) {
+    const file = input.files[0];
     if (!file) return;
-    this.addMessage('user', '[上传了图片]');
-    this.showTyping();
-    const form = new FormData();
-    form.append('file', file);
+    this._addMsg('user', '[上传了图片]');
+    this._showTyping();
+    const fd = new FormData();
+    fd.append('file', file);
     try {
-      const resp = await fetch('/upload/image', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${this.token}` },
-        body: form,
+      const r = await fetch('/upload/image', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }, body: fd,
       });
-      const data = await resp.json();
-      this.hideTyping();
-      if (data.auto_filled_stem) {
-        this.chatInput.value = data.auto_filled_stem;
-        this.chatInput.focus();
-        this.addMessage('assistant',
-          `识别为一道 ${data.auto_routed_to_subject || ''} 题：\n${data.auto_filled_stem}\n\n直接发送，我来讲解。`,
-          'subject_teacher');
+      const d = await r.json();
+      this._hideTyping();
+      if (d.auto_filled_stem) {
+        document.getElementById('chat-input').value = d.auto_filled_stem;
+        document.getElementById('chat-input').focus();
+        this._addMsg('assistant', '识别为一道 ' + (d.auto_routed_to_subject || '') + ' 题：\n' + d.auto_filled_stem + '\n\n直接发送，我来讲解。', 'subject_teacher');
       }
     } catch (e) {
-      this.hideTyping();
-      this.addMessage('assistant', '图片处理出错，请重试。');
+      this._hideTyping();
+      this._addMsg('assistant', '图片处理出错，请重试。');
     }
-    this.fileInput.value = '';
-  }
-}
+    input.value = '';
+  },
+};
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.app = new PacerApp();
-  window.app.init();
-});
+document.addEventListener('DOMContentLoaded', () => Pacer.init());
