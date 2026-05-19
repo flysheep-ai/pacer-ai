@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import logging
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -101,6 +102,16 @@ async def send_message(
                 student_id=student_id, event_type="assistant_done",
                 data={"message_id": msg.id, "agent": out.agent_used, "stop_reason": "completed"},
             ))
+
+            # Background: auto-extract key facts into long-term memory
+            try:
+                from pacer.memory.summarizer import extract_and_store
+                user_text = req.text if isinstance(req.text, str) else req.text
+                n = await extract_and_store(request.app.state.llm, student_id, user_text, out.final_text, lambda: deps._SessionLocal())
+                if n > 0:
+                    logging.getLogger("pacer").info(f"Stored {n} new memories")
+            except Exception:
+                pass
         except asyncio.CancelledError:
             local_store.finalize_message(msg.id, content="".join(collected), status="failed")
             await bus.publish(SSEEvent(

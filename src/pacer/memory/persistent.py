@@ -39,6 +39,14 @@ class PersistentMemory:
         self._session.refresh(entry)
         return entry
 
+    def find_by_key_and_type(self, key: str, type: str) -> MemoryEntry | None:
+        """Check if a memory with the same key+type already exists."""
+        return (
+            self._session.query(MemoryEntry)
+            .filter_by(student_id=self._student_id, key=key, type=type)
+            .first()
+        )
+
     def update_embedding(self, entry_id: int, content: str, key: str = "") -> None:
         """Re-encode and update embedding for an existing entry."""
         text_for_embed = f"{key}: {content}"
