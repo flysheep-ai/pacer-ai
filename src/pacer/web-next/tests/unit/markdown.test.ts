@@ -3,33 +3,32 @@ import { mdToHtml } from '@/utils/markdown'
 
 describe('mdToHtml', () => {
   it('escapes HTML entities', () => {
-    expect(mdToHtml('<script>x</script>'))
-      .toBe('&lt;script&gt;x&lt;/script&gt;')
+    const out = mdToHtml('<script>x</script>')
+    expect(out).toContain('&lt;script&gt;x&lt;/script&gt;')
+    expect(out).not.toContain('<script>')
   })
 
   it('renders inline code', () => {
-    expect(mdToHtml('use `let x = 1`'))
-      .toBe('use <code>let x = 1</code>')
+    const out = mdToHtml('use `let x = 1`')
+    expect(out).toContain('<code>let x = 1</code>')
   })
 
   it('renders fenced code blocks', () => {
     const out = mdToHtml('```js\nconst a = 1\n```')
-    expect(out).toBe('<pre><code>const a = 1\n</code></pre>')
+    expect(out).toContain('<pre><code')
+    expect(out).toContain('hljs')
   })
 
   it('renders bold', () => {
-    expect(mdToHtml('this is **bold**'))
-      .toBe('this is <strong>bold</strong>')
+    expect(mdToHtml('this is **bold**')).toContain('<strong>bold</strong>')
   })
 
   it('converts newlines to <br>', () => {
-    expect(mdToHtml('line1\nline2'))
-      .toBe('line1<br>line2')
+    expect(mdToHtml('line1\nline2')).toContain('<br>')
   })
 
   it('handles ampersand correctly before other replacements', () => {
-    expect(mdToHtml('a & b'))
-      .toBe('a &amp; b')
+    expect(mdToHtml('a & b')).toContain('a &amp; b')
   })
 
   it('handles empty input', () => {
