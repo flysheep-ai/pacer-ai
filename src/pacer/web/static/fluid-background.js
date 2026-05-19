@@ -125,7 +125,7 @@ class FluidBackground {
         y: y + jy,
         life: 1.0,
         decay: 0.025 + Math.random() * 0.025,  // fades faster
-        size: 2.5 + Math.random() * 5,         // smaller blots
+        size: 1.2 + Math.random() * 2.5,         // barely-there ink dots
       });
     }
   }
@@ -159,7 +159,7 @@ class FluidBackground {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= p.decay * cappedDt * 0.06;
-      p.size += 0.012 * cappedDt; // ink slowly bleeds outward
+      p.size += 0.004 * cappedDt; // very slow bleed
       if (p.life <= 0) this.particles.splice(i, 1);
     }
   }
@@ -209,7 +209,7 @@ class FluidBackground {
     gl.vertexAttribPointer(a.aAlpha, 1, gl.FLOAT, false, 0, 0);
 
     gl.uniform2f(a.uRes, this.canvas.width, this.canvas.height);
-    gl.uniform1f(a.uPtScale, this.canvas.height / 2.2);
+    gl.uniform1f(a.uPtScale, 2.8); // tiny ink dots: 2.8 × (1.2~3.7) ≈ 3-10 px
 
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     // Ink colour — warm grey-black on light, soft grey on dark
