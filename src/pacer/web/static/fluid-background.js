@@ -268,10 +268,16 @@ class FluidBackground {
   // ─── events ─────────────────────────────────────────────
 
   _bindEvents() {
-    // Mouse tracking on window (not canvas — keeps form clickable)
-    window.addEventListener('mousemove', (e) => {
+    // Mouse tracking on window
+    const updateMouse = (e) => {
       this.mouse.tx = e.clientX / window.innerWidth;
       this.mouse.ty = 1.0 - e.clientY / window.innerHeight;
+    };
+    window.addEventListener('mousemove', updateMouse);
+    // When mouse leaves, push target off-screen so particles return to natural flow
+    window.addEventListener('mouseleave', () => {
+      this.mouse.tx = -2;
+      this.mouse.ty = -2;
     });
     window.addEventListener('resize', () => this._resize());
   }
