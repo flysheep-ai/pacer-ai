@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 from openai import AsyncOpenAI
-from pacer.llm.client import LLMMessage, LLMResponse
+from pacer.llm.client import LLMMessage, LLMResponse, StreamChunk
 
 
 def _anthropic_tools_to_openai(tools: list[dict] | None) -> list[dict] | None:
@@ -21,45 +21,6 @@ def _anthropic_tools_to_openai(tools: list[dict] | None) -> list[dict] | None:
     return result
 
 
-def _openai_msg(m: LLMMessage) -> dict:
-    if isinstance(m.content, str):
-        return {"role": m.role, "content": m.content}
-    # content is a list of blocks (tool_use / tool_result etc)
-    blocks = m.content
-    # Separate text and tool_use
-    text_parts = [b["text"] for b in blocks if b["type"] == "text"]
-    tool_calls = []
-    for b in blocks:
-        if b["type"] == "tool_use":
-            tool_calls.append({
-                "id": b["id"],
-                "type": "function",
-                "function": {"name": b["name"], "arguments": str(b["input"])},
-            })
-        elif b["type"] == "tool_result":
-            tool_calls.append({
-                "role": "tool",
-                "tool_call_id": b["tool_use_id"],
-                "content": b["content"],
-            })
-    msg: dict = {"role": m.role}
-    if text_parts:
-        msg["content"] = "\n".join(text_parts)
-    if tool_calls:
-        # Separate tool_calls from tool results
-        real_tool_calls = [t for t in tool_calls if "type" in t]
-        tool_results = [t for t in tool_calls if "role" in t]
-        if real_tool_calls:
-            msg["tool_calls"] = real_tool_calls
-        if tool_results:
-            msg = tool_results[0]  # tool message
-        if not real_tool_calls and not tool_results:
-            msg["content"] = msg.get("content", "")
-    if not msg.get("content") and not tool_calls:
-        msg["content"] = ""
-    return msg
-
-
 class OpenAICompatClient:
     """LLM client that talks to OpenAI-compatible APIs (including proxies).
 
@@ -71,18 +32,14 @@ class OpenAICompatClient:
         self.model = model
         self.max_tokens = max_tokens
 
-    async def chat(
-        self,
-        messages: list[LLMMessage],
-        *,
-        system: str | None = None,
-        tools: list[dict[str, Any]] | None = None,
-        model: str | None = None,
-    ) -> LLMResponse:
+    def _build_messages(
+        self, messages: list[LLMMessage], system: str | None,
+    ) -> list[dict]:
+        """Convert LLMMessages + optional system prompt to OpenAI-format dict list."""
+        import json
         oai_msgs: list[dict] = []
         if system:
             oai_msgs.append({"role": "system", "content": system})
-        # For the last assistant message with tool_use, convert properly
         for m in messages:
             if isinstance(m.content, list):
                 blocks = m.content
@@ -90,10 +47,8 @@ class OpenAICompatClient:
                 tool_calls = []
                 for b in blocks:
                     if b["type"] == "tool_use":
-                        import json
                         tool_calls.append({
-                            "id": b["id"],
-                            "type": "function",
+                            "id": b["id"], "type": "function",
                             "function": {
                                 "name": b["name"],
                                 "arguments": json.dumps(b["input"], ensure_ascii=False),
@@ -113,6 +68,17 @@ class OpenAICompatClient:
                     oai_msgs.append({"role": m.role, "content": "\n".join(text_parts)})
             else:
                 oai_msgs.append({"role": m.role, "content": m.content})
+        return oai_msgs
+
+    async def chat(
+        self,
+        messages: list[LLMMessage],
+        *,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> LLMResponse:
+        oai_msgs = self._build_messages(messages, system)
 
         kwargs: dict = {
             "model": model or self.model,
@@ -150,40 +116,13 @@ class OpenAICompatClient:
         tools: list[dict[str, Any]] | None = None,
         model: str | None = None,
     ) -> AsyncIterator[StreamChunk]:
-        from pacer.llm.client import StreamChunk
-
-        oai_msgs: list[dict] = []
-        if system:
-            oai_msgs.append({"role": "system", "content": system})
-        for m in messages:
-            if isinstance(m.content, list):
-                blocks = m.content
-                text_parts = [b["text"] for b in blocks if b["type"] == "text"]
-                tool_calls = []
-                for b in blocks:
-                    if b["type"] == "tool_use":
-                        import json
-                        tool_calls.append({
-                            "id": b["id"], "type": "function",
-                            "function": {"name": b["name"], "arguments": json.dumps(b["input"], ensure_ascii=False)},
-                        })
-                    elif b["type"] == "tool_result":
-                        oai_msgs.append({"role": "tool", "tool_call_id": b["tool_use_id"], "content": str(b["content"])})
-                if tool_calls:
-                    tc_msg = {"role": "assistant", "content": "\n".join(text_parts) or None}
-                    tc_msg["tool_calls"] = tool_calls
-                    oai_msgs.append(tc_msg)
-                elif text_parts and not any(b["type"] == "tool_result" for b in blocks):
-                    oai_msgs.append({"role": m.role, "content": "\n".join(text_parts)})
-            else:
-                oai_msgs.append({"role": m.role, "content": m.content})
+        oai_msgs = self._build_messages(messages, system)
 
         kwargs = {
             "model": model or self.model,
             "max_tokens": self.max_tokens,
             "messages": oai_msgs,
             "stream": True,
-            "stream_options": {"include_usage": True},
         }
         if tools:
             kwargs["tools"] = _anthropic_tools_to_openai(tools)

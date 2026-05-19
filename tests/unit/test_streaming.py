@@ -43,7 +43,8 @@ async def test_anthropic_chat_stream_yields_chunks():
     with patch.object(client._client.messages, "stream", return_value=mock_stream):
         chunks = []
         async for chunk in client.chat_stream([LLMMessage(role="user", content="hi")]):
-            chunks.append(chunk.delta_text)
+            if chunk.delta_text:
+                chunks.append(chunk.delta_text)
         assert "".join(chunks) == "Hello world"
 
 

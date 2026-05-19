@@ -89,8 +89,11 @@ class LLMClient:
 
         async with self._client.messages.stream(**kwargs) as stream:
             async for event in stream:
+                # Only emit text deltas for now; tool_call_delta streaming is a future phase
                 if event.type == "content_block_delta" and event.delta.type == "text_delta":
                     yield StreamChunk(delta_text=event.delta.text)
+            final_msg = await stream.get_final_message()
+            yield StreamChunk(delta_text="", finish_reason=final_msg.stop_reason)
 
     async def chat_with_images(
         self,
