@@ -209,7 +209,7 @@ class FluidBackground {
     gl.vertexAttribPointer(a.aAlpha, 1, gl.FLOAT, false, 0, 0);
 
     gl.uniform2f(a.uRes, this.canvas.width, this.canvas.height);
-    gl.uniform1f(a.uPtScale, 8.0);
+    gl.uniform1f(a.uPtScale, 40.0); // ~60-200px ink blots
 
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     // Ink colour — warm grey-black on light, soft grey on dark
