@@ -118,15 +118,14 @@ class FluidBackground {
       if (this.particles.length >= this.maxParticles) {
         this.particles.shift();
       }
-      // Minimal noise — ink sits right under cursor
-      const jx = (Math.random() - 0.5) * 0.0015;
-      const jy = (Math.random() - 0.5) * 0.0015;
+      const jx = (Math.random() - 0.5) * 0.002;
+      const jy = (Math.random() - 0.5) * 0.002;
       this.particles.push({
         x: x + jx,
         y: y + jy,
         life: 1.0,
-        decay: 0.012 + Math.random() * 0.014,
-        size: 4 + Math.random() * 10,
+        decay: 0.025 + Math.random() * 0.025,  // fades faster
+        size: 2.5 + Math.random() * 5,         // smaller blots
       });
     }
   }
@@ -137,18 +136,22 @@ class FluidBackground {
     const cappedDt = Math.min(dt, 33);
     const now = performance.now();
 
-    // Spawn every frame when mouse is active — no throttle, no gap
+    // Spawn when mouse is active — trail interpolation, lower density
     if (this.mouse.active) {
-      // Interpolate along the trail so there are no gaps
       const dx = this.mouse.x - this.mouse.prevX;
       const dy = this.mouse.y - this.mouse.prevY;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      const steps = Math.max(1, Math.ceil(dist * 400));
-      for (let s = 0; s < steps; s++) {
-        const t = steps === 1 ? 1 : s / (steps - 1);
-        const ix = this.mouse.prevX + dx * t;
-        const iy = this.mouse.prevY + dy * t;
-        this._spawn(ix, iy, 1);
+      // Only spawn if mouse actually moved a tiny bit
+      if (dist > 0.0005) {
+        const steps = Math.min(Math.ceil(dist * 200), 8);
+        for (let s = 0; s < steps; s++) {
+          const t = s / Math.max(steps - 1, 1);
+          this._spawn(
+            this.mouse.prevX + dx * t,
+            this.mouse.prevY + dy * t,
+            1
+          );
+        }
       }
     }
 
@@ -182,7 +185,7 @@ class FluidBackground {
       pos[i*2+1] = p.y;
       sz[i]  = p.size;
       // Alpha follows life curve — stays visible then fades
-      al[i]  = p.life * 0.38; // visible ink at birth, fades out
+      al[i]  = p.life * 0.25; // lighter ink, fades gracefully
     }
 
     const a = this._u;
