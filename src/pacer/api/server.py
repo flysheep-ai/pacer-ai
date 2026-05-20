@@ -1,10 +1,26 @@
 from __future__ import annotations
+import logging
+import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pacer.api import deps
+
+
+def _configure_logging() -> None:
+    """Idempotent root logger setup. PACER_LOG_LEVEL overrides default INFO."""
+    level = os.environ.get("PACER_LOG_LEVEL", "INFO").upper()
+    root = logging.getLogger()
+    if root.handlers:
+        # Already configured by uvicorn or test harness — only ensure level.
+        root.setLevel(level)
+        return
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
+    )
 from pacer.api.routes.auth import router as auth_router
 from pacer.api.routes.message import router as message_router
 from pacer.api.routes.events import router as events_router
@@ -34,13 +50,19 @@ def _create_llm_client(settings):
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
+    _configure_logging()
     deps.init_db(database_url)
     app = FastAPI(title="pacer-ai")
     settings = get_settings()
 
+    # allow_origins=["*"] with allow_credentials=True is silently disabled by browsers;
+    # use an explicit allowlist instead (origins for the SPA dev server + production host).
+    cors_origins = [o.strip() for o in (settings.cors_origins or "").split(",") if o.strip()]
+    if not cors_origins:
+        cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

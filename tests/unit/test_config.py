@@ -19,6 +19,9 @@ def test_settings_defaults_for_server(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./test.db")
     monkeypatch.setenv("LLM_API_KEY", "sk-ant-test")
     monkeypatch.setenv("PACER_INTERNAL_TOKEN", "test-token-123")
-    s = Settings()
+    monkeypatch.delenv("PACER_HOST", raising=False)
+    monkeypatch.delenv("PACER_PORT", raising=False)
+    # Bypass any project-local .env that may override defaults.
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
     assert s.host == "127.0.0.1"
     assert s.port == 8000
