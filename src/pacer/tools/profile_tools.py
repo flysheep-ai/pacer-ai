@@ -1,7 +1,5 @@
 from __future__ import annotations
-from collections.abc import Callable
-from sqlalchemy.orm import Session
-from pacer.tools.base import BaseTool
+from pacer.tools.base import StudentScopedTool
 from pacer.db.models import Student
 
 
@@ -12,15 +10,11 @@ def _set_dotted(d: dict, dotted_key: str, value):
     d[parts[-1]] = value
 
 
-class GetStudentProfileTool(BaseTool):
+class GetStudentProfileTool(StudentScopedTool):
     name = "get_student_profile"
     description = "Fetch the student's profile (name, grade, school, target_school, stream, profile_json)."
     parameters = {"type": "object", "properties": {}}
     is_readonly = True
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self) -> dict:
         sess = self._session_factory()
@@ -34,7 +28,7 @@ class GetStudentProfileTool(BaseTool):
         }
 
 
-class UpdateStudentProfileTool(BaseTool):
+class UpdateStudentProfileTool(StudentScopedTool):
     name = "update_student_profile"
     description = (
         "Update student profile fields. Keys without dots write to top-level fields; "
@@ -53,10 +47,6 @@ class UpdateStudentProfileTool(BaseTool):
     is_readonly = False
 
     _TOP_LEVEL = {"name", "grade", "school", "target_school", "stream"}
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, updates: dict) -> dict:
         sess = self._session_factory()

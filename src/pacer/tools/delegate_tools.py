@@ -1,44 +1,18 @@
 from __future__ import annotations
-from pacer.tools.base import BaseTool
-
-
-class DelegateToSubjectTeacherTool(BaseTool):
-    name = "delegate_to_subject_teacher"
-    description = "Hand the conversation to a subject specialist teacher."
-    parameters = {
-        "type": "object",
-        "properties": {
-            "subject": {
-                "type": "string",
-                "enum": ["math", "chinese", "english", "physics", "chemistry", "biology"],
-            },
-            "reason": {"type": "string"},
-        },
-        "required": ["subject"],
-    }
-    is_readonly = False
-
-    async def execute(self, *, subject: str, reason: str = "") -> dict:
-        return {"delegated_to": "subject_teacher", "subject": subject, "reason": reason}
-
-
-class DelegateToMoodCompanionTool(BaseTool):
-    name = "delegate_to_mood_companion"
-    description = "Hand the conversation to the mood companion for emotional support."
-    parameters = {
-        "type": "object",
-        "properties": {"reason": {"type": "string"}},
-        "required": [],
-    }
-    is_readonly = False
-
-    async def execute(self, *, reason: str = "") -> dict:
-        return {"delegated_to": "mood_companion", "reason": reason}
+from pacer.tools.base import BaseTool, StudentScopedTool
+from pacer.db.models import MoodLog
 
 
 class ReturnToHomeroomTool(BaseTool):
+    """Marker tool the subject/mood agents call to indicate task completion.
+
+    Doesn't actually switch agents (orchestration is router-based, not
+    delegation-based) — the call shows up in the trace so the calling
+    sub-agent's end-of-turn intent is auditable.
+    """
+
     name = "return_to_homeroom"
-    description = "Signal that this agent has completed its task and control should return to the homeroom teacher."
+    description = "Signal that this agent has completed its task."
     parameters = {
         "type": "object",
         "properties": {"summary": {"type": "string"}},
@@ -50,7 +24,7 @@ class ReturnToHomeroomTool(BaseTool):
         return {"return": True, "summary": summary}
 
 
-class LogMoodTool(BaseTool):
+class LogMoodTool(StudentScopedTool):
     name = "log_mood"
     description = "Persist a mood log entry for the student."
     parameters = {
@@ -65,13 +39,8 @@ class LogMoodTool(BaseTool):
     }
     is_readonly = False
 
-    def __init__(self, session_factory, student_id):
-        self._session_factory = session_factory
-        self._student_id = student_id
-
     async def execute(self, *, self_score: int, summary: str,
                       topics: list[str] | None = None, red_flag: bool = False) -> dict:
-        from pacer.db.models import MoodLog
         sess = self._session_factory()
         log = MoodLog(
             student_id=self._student_id, self_score=self_score,

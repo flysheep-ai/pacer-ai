@@ -1,12 +1,11 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from collections.abc import Callable
-from sqlalchemy.orm import Session
-from pacer.tools.base import BaseTool
+from pacer.tools.base import BaseTool, StudentScopedTool
 from pacer.db.models import ErrorRecord, Question
+from pacer.llm.client import LLMMessage
 
 
-class SaveErrorRecordTool(BaseTool):
+class SaveErrorRecordTool(StudentScopedTool):
     name = "save_error_record"
     description = "Persist an error record for the student."
     parameters = {
@@ -25,10 +24,6 @@ class SaveErrorRecordTool(BaseTool):
         "required": ["stem_text", "user_answer", "correct_answer", "error_type", "source"],
     }
     is_readonly = False
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, stem_text: str, user_answer: str, correct_answer: str,
                       error_type: str, source: str, question_id: int | None = None,
@@ -49,7 +44,7 @@ class SaveErrorRecordTool(BaseTool):
         return {"error_id": e.id}
 
 
-class GetRecentErrorsTool(BaseTool):
+class GetRecentErrorsTool(StudentScopedTool):
     name = "get_recent_errors"
     description = "Fetch the student's recent error records."
     parameters = {
@@ -61,10 +56,6 @@ class GetRecentErrorsTool(BaseTool):
         },
     }
     is_readonly = True
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, limit: int = 10, subject: str | None = None,
                       since_days: int = 7) -> dict:
@@ -103,13 +94,13 @@ class GenerateVariantTool(BaseTool):
         prompt = f"Generate a variant practice question for:\n{original_stem}" + \
                  (f"\nTopic: {topic}" if topic else "")
         resp = await self.llm.chat(
-            [{"role": "user", "content": prompt}],
+            [LLMMessage(role="user", content=prompt)],
             system="Output a variant exam question (stem + expected answer) in Chinese.",
         )
         return {"variant": resp.text}
 
 
-class MarkErrorReviewedTool(BaseTool):
+class MarkErrorReviewedTool(StudentScopedTool):
     name = "mark_error_reviewed"
     description = "Mark an error record as reviewed."
     parameters = {
@@ -121,10 +112,6 @@ class MarkErrorReviewedTool(BaseTool):
         "required": ["error_record_id", "correct"],
     }
     is_readonly = False
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, error_record_id: int, correct: bool) -> dict:
         sess = self._session_factory()

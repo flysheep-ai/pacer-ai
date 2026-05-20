@@ -1,12 +1,10 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from collections.abc import Callable
-from sqlalchemy.orm import Session
-from pacer.tools.base import BaseTool
+from pacer.tools.base import StudentScopedTool
 from pacer.db.models import StudentMastery
 
 
-class UpdateStudentMasteryTool(BaseTool):
+class UpdateStudentMasteryTool(StudentScopedTool):
     name = "update_student_mastery"
     description = "Update the student's mastery score for a knowledge point."
     parameters = {
@@ -18,10 +16,6 @@ class UpdateStudentMasteryTool(BaseTool):
         "required": ["knowledge_point_id", "correct"],
     }
     is_readonly = False
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, knowledge_point_id: int, correct: bool) -> dict:
         sess = self._session_factory()
@@ -44,7 +38,7 @@ class UpdateStudentMasteryTool(BaseTool):
         return {"knowledge_point_id": knowledge_point_id, "mastery_score": sm.mastery_score}
 
 
-class GetStudentWeaknessTool(BaseTool):
+class GetStudentWeaknessTool(StudentScopedTool):
     name = "get_student_weakness"
     description = "Get the student's weakest knowledge points."
     parameters = {
@@ -55,10 +49,6 @@ class GetStudentWeaknessTool(BaseTool):
         },
     }
     is_readonly = True
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, subject: str | None = None, top_n: int = 5) -> dict:
         sess = self._session_factory()

@@ -1,11 +1,9 @@
 from __future__ import annotations
-from collections.abc import Callable
-from sqlalchemy.orm import Session
-from pacer.tools.base import BaseTool
+from pacer.tools.base import StudentScopedTool
 from pacer.memory.persistent import PersistentMemory
 
 
-class SearchMemoryTool(BaseTool):
+class SearchMemoryTool(StudentScopedTool):
     name = "search_memory"
     description = "Search the student's long-term memory for entries matching a query."
     parameters = {
@@ -18,10 +16,6 @@ class SearchMemoryTool(BaseTool):
     }
     is_readonly = True
 
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
-
     async def execute(self, *, query: str, max_results: int = 3) -> dict:
         sess = self._session_factory()
         mem = PersistentMemory(sess, self._student_id)
@@ -32,9 +26,9 @@ class SearchMemoryTool(BaseTool):
         ]}
 
 
-class RememberTool(BaseTool):
+class RememberTool(StudentScopedTool):
     name = "remember"
-    description = "Persist a fact about the student to long-term memory."
+    description = "Persist a fact about the student to long-term memory (skipped on near-duplicates)."
     parameters = {
         "type": "object",
         "properties": {
@@ -47,12 +41,10 @@ class RememberTool(BaseTool):
     }
     is_readonly = False
 
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
-
     async def execute(self, *, type: str, key: str, content: str, importance: float = 0.5) -> dict:
         sess = self._session_factory()
         mem = PersistentMemory(sess, self._student_id)
-        entry = mem.add(type=type, key=key, content=content, importance=importance)
-        return {"saved_id": entry.id}
+        entry, reason = mem.add_if_novel(type=type, key=key, content=content, importance=importance)
+        if entry is None:
+            return {"saved": False, "reason": reason}
+        return {"saved": True, "saved_id": entry.id}

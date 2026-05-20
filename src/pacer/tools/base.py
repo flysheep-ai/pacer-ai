@@ -1,6 +1,9 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
+
+from sqlalchemy.orm import Session
 
 
 class BaseTool(ABC):
@@ -20,6 +23,14 @@ class BaseTool(ABC):
             "description": self.description,
             "input_schema": self.parameters,
         }
+
+
+class StudentScopedTool(BaseTool):
+    """Convenience base for tools bound to (session_factory, student_id)."""
+
+    def __init__(self, session_factory: Callable[[], Session], student_id: int):
+        self._session_factory = session_factory
+        self._student_id = student_id
 
 
 class ToolRegistry:

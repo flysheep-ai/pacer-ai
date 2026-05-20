@@ -1,20 +1,14 @@
 from __future__ import annotations
-from datetime import date, datetime
-from collections.abc import Callable
-from sqlalchemy.orm import Session
-from pacer.tools.base import BaseTool
+from datetime import date, datetime, timezone
+from pacer.tools.base import StudentScopedTool
 from pacer.db.models import Plan
 
 
-class GetTodayPlanTool(BaseTool):
+class GetTodayPlanTool(StudentScopedTool):
     name = "get_today_plan"
     description = "Get the student's plan for today."
     parameters = {"type": "object", "properties": {}}
     is_readonly = True
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self) -> dict:
         sess = self._session_factory()
@@ -30,7 +24,7 @@ class GetTodayPlanTool(BaseTool):
         }}
 
 
-class CreatePlanTool(BaseTool):
+class CreatePlanTool(StudentScopedTool):
     name = "create_plan"
     description = "Create a new study plan (daily or weekly)."
     parameters = {
@@ -43,21 +37,17 @@ class CreatePlanTool(BaseTool):
     }
     is_readonly = False
 
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
-
     async def execute(self, *, type: str, tasks: list[dict]) -> dict:
         sess = self._session_factory()
         plan = Plan(
-            student_id=self._student_id, date=datetime.utcnow(),
+            student_id=self._student_id, date=datetime.now(timezone.utc),
             type=type, tasks_json=tasks, generated_by="homeroom",
         )
         sess.add(plan); sess.commit(); sess.refresh(plan)
         return {"plan_id": plan.id, "tasks": tasks}
 
 
-class UpdatePlanTool(BaseTool):
+class UpdatePlanTool(StudentScopedTool):
     name = "update_plan"
     description = "Update an existing plan's tasks or feedback."
     parameters = {
@@ -70,10 +60,6 @@ class UpdatePlanTool(BaseTool):
         "required": ["plan_id"],
     }
     is_readonly = False
-
-    def __init__(self, session_factory: Callable[[], Session], student_id: int):
-        self._session_factory = session_factory
-        self._student_id = student_id
 
     async def execute(self, *, plan_id: int, tasks_json: list[dict] | None = None,
                       feedback: str | None = None) -> dict:
