@@ -1,6 +1,8 @@
 from __future__ import annotations
+import logging
 from dataclasses import dataclass
 from collections.abc import Awaitable, Callable
+from typing import Any
 from sqlalchemy.orm import Session
 from pacer.llm.client import LLMClient, LLMMessage
 from pacer.skills.loader import SkillsLoader
@@ -9,7 +11,9 @@ from pacer.agents.homeroom import build_homeroom_agent
 from pacer.agents.subject_teacher import build_subject_teacher_agent
 from pacer.agents.mood_companion import build_mood_agent
 from pacer.memory.persistent import PersistentMemory
-from pacer.agent.loop import AgentResult
+from pacer.agent.loop import AgentLoop, AgentResult
+
+log = logging.getLogger("pacer.orchestrator")
 
 
 @dataclass
@@ -34,11 +38,7 @@ class Orchestrator:
         self.skills_loader = skills_loader
         self.vision_model = vision_model or llm.model
 
-    async def handle(
-        self, user_message: str, history: list[LLMMessage],
-    ) -> OrchestratedResult:
-        route = await self.router.route(user_message)
-
+    def _build_agent(self, route: RouteDecision) -> tuple[AgentLoop, str]:
         if route.intent == "subject_qa" and route.subject:
             agent = build_subject_teacher_agent(
                 llm=self.llm, session_factory=self.session_factory,
@@ -46,21 +46,32 @@ class Orchestrator:
                 skills_loader=self.skills_loader,
                 vision_model=self.vision_model,
             )
-            agent_used = "subject_teacher"
-        elif route.intent == "mood_support":
+            return agent, "subject_teacher"
+        if route.intent == "mood_support":
             agent = build_mood_agent(
                 llm=self.llm, session_factory=self.session_factory,
                 student_id=self.student_id,
             )
-            agent_used = "mood_companion"
-        else:
-            agent = build_homeroom_agent(
-                llm=self.llm, session_factory=self.session_factory,
-                student_id=self.student_id,
-            )
-            agent_used = "homeroom"
+            return agent, "mood_companion"
+        agent = build_homeroom_agent(
+            llm=self.llm, session_factory=self.session_factory,
+            student_id=self.student_id,
+        )
+        return agent, "homeroom"
 
-        recalled = self._recall_memories(user_message)
+    @staticmethod
+    def _extract_text(user_message: str | list[dict[str, Any]]) -> str:
+        if isinstance(user_message, str):
+            return user_message
+        return " ".join(b.get("text", "") for b in user_message if b.get("type") == "text")
+
+    async def handle(
+        self, user_message: str | list[dict[str, Any]], history: list[LLMMessage],
+    ) -> OrchestratedResult:
+        text = self._extract_text(user_message)
+        route = await self.router.route(text)
+        agent, agent_used = self._build_agent(route)
+        recalled = self._recall_memories(text)
         result = await agent.run(user_message, history=history, recalled_memory_block=recalled)
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
@@ -71,39 +82,25 @@ class Orchestrator:
         self, user_message: str | list[dict[str, Any]], history: list[LLMMessage],
         on_delta: Callable[[str], Awaitable[None]],
     ) -> OrchestratedResult:
-        route_text = user_message if isinstance(user_message, str) else " ".join(b.get("text", "") for b in user_message if b.get("type") == "text")
-        route = await self.router.route(route_text)
-
-        if route.intent == "subject_qa" and route.subject:
-            agent = build_subject_teacher_agent(
-                llm=self.llm, session_factory=self.session_factory,
-                student_id=self.student_id, subject=route.subject,
-                skills_loader=self.skills_loader,
-                vision_model=self.vision_model,
-            )
-            agent_used = "subject_teacher"
-        elif route.intent == "mood_support":
-            agent = build_mood_agent(
-                llm=self.llm, session_factory=self.session_factory,
-                student_id=self.student_id,
-            )
-            agent_used = "mood_companion"
-        else:
-            agent = build_homeroom_agent(
-                llm=self.llm, session_factory=self.session_factory,
-                student_id=self.student_id,
-            )
-            agent_used = "homeroom"
-
-        recalled = self._recall_memories(route_text)
-        result = await agent.run_streaming(user_message, history=history, on_delta=on_delta, recalled_memory_block=recalled)
+        text = self._extract_text(user_message)
+        route = await self.router.route(text)
+        agent, agent_used = self._build_agent(route)
+        recalled = self._recall_memories(text)
+        result = await agent.run_streaming(
+            user_message, history=history, on_delta=on_delta, recalled_memory_block=recalled,
+        )
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
         )
 
     def _recall_memories(self, query: str) -> str | None:
-        """Search long-term memory for relevant entries and format as context block."""
+        """Pre-fetch long-term memory and format as a context block.
+
+        Agents no longer carry a `search_memory` tool by default (homeroom),
+        because this pre-recall already injects the relevant entries. Subject
+        and mood agents keep the tool for proactive lookups during a task.
+        """
         try:
             session = self.session_factory()
             mem = PersistentMemory(session, self.student_id)
@@ -116,4 +113,5 @@ class Orchestrator:
             lines.append("</recalled-memories>")
             return "\n".join(lines)
         except Exception:
+            log.exception("memory recall failed student=%s", self.student_id)
             return None

@@ -1,8 +1,15 @@
 from __future__ import annotations
 import json
+import logging
 import re
+from collections.abc import Callable
+
+from sqlalchemy.orm import Session
+
 from pacer.llm.client import LLMClient, LLMMessage
 from pacer.memory.persistent import PersistentMemory
+
+log = logging.getLogger("pacer.summarizer")
 
 _SUMMARIZE_SYSTEM = """你是一个记忆提取助手。从对话中提取关于学生的重要事实，每条事实单独列出。
 
@@ -23,11 +30,14 @@ _SUMMARIZE_SYSTEM = """你是一个记忆提取助手。从对话中提取关于
 - "content": 完整描述（50字以内）
 
 如果没有值得记住的信息，输出空数组 []。
-
-示例：
-[{"type":"goal","key":"目标大学","content":"学生目标是清华大学计算机系"},
- {"type":"weakness","key":"导数计算","content":"学生在复合函数求导时容易出错，需要多练链式法则"}]
 """
+
+
+def _strip_code_fences(text: str) -> str:
+    text = text.strip()
+    text = re.sub(r"^```(?:json)?\s*\n?", "", text)
+    text = re.sub(r"\n?```\s*$", "", text)
+    return text
 
 
 async def extract_and_store(
@@ -35,53 +45,62 @@ async def extract_and_store(
     student_id: int,
     user_text: str,
     assistant_text: str,
-    session_factory,
+    session_factory: Callable[[], Session],
+    *,
+    model: str | None = None,
 ) -> int:
-    """Extract key facts from an exchange and store as memory entries.
+    """Extract key facts from one exchange and store as memory entries.
 
-    Returns the number of new memories stored.
+    Returns the number of *new* (non-duplicate) memories stored.
+    `model` lets callers route this to a cheaper model (e.g. Haiku) instead of
+    the main one used for replies.
     """
     if not assistant_text or len(assistant_text) < 20:
         return 0
 
-    messages = [
-        LLMMessage(role="user", content=f"用户: {user_text[:500]}\n助手: {assistant_text[:1000]}\n\n请提取值得记住的事实。"),
-    ]
-
+    prompt = (
+        f"用户: {user_text[:500]}\n助手: {assistant_text[:1000]}\n\n请提取值得记住的事实。"
+    )
     try:
         resp = await llm.chat(
-            messages,
-            system=_SUMMARIZE_SYSTEM,
-            model=llm.model,
+            [LLMMessage(role="user", content=prompt)],
+            system=_SUMMARIZE_SYSTEM, model=model,
         )
+    except Exception:
+        log.exception("summarizer LLM call failed student=%s", student_id)
+        return 0
 
-        # Parse JSON from response (may be wrapped in markdown)
-        text = resp.text.strip()
-        # Remove markdown code fences if present
-        text = re.sub(r'^```(?:json)?\s*\n?', '', text)
-        text = re.sub(r'\n?```\s*$', '', text)
-
+    text = _strip_code_fences(resp.text)
+    try:
         facts = json.loads(text)
-        if not isinstance(facts, list):
-            return 0
+    except json.JSONDecodeError:
+        log.warning("summarizer non-JSON output student=%s text=%r", student_id, text[:200])
+        return 0
+    if not isinstance(facts, list):
+        log.warning("summarizer non-list output student=%s", student_id)
+        return 0
 
-        session = session_factory()
+    session = session_factory()
+    try:
         mem = PersistentMemory(session, student_id)
         count = 0
         for f in facts:
             if not isinstance(f, dict):
                 continue
-            t = f.get("type", "event")
-            k = f.get("key", "")
-            c = f.get("content", "")
+            t = (f.get("type") or "event").strip()
+            k = (f.get("key") or "").strip()
+            c = (f.get("content") or "").strip()
             if not k or not c:
                 continue
-            # Skip if very similar entry already exists
-            existing = mem.find_by_key_and_type(k, t)
-            if existing:
-                continue
-            mem.add(type=t, key=k, content=c, importance=0.6)
-            count += 1
+            entry, reason = mem.add_if_novel(type=t, key=k, content=c, importance=0.6)
+            if entry is not None:
+                count += 1
+            elif reason == "duplicate_semantic":
+                log.debug("skipping near-duplicate memory key=%s", k)
         return count
-    except (json.JSONDecodeError, Exception):
-        return 0
+    finally:
+        # Only close if the factory gave us a session we own.
+        try:
+            session.close()
+        except Exception:
+            pass
