@@ -1,27 +1,27 @@
 # pacer-ai
 
-> AI Study Companion · A Pacer for the 高考 Marathon
+> AI study companion for the Gaokao marathon
 
 [简体中文](README.zh-CN.md) · **English**
 
 ![pacer-ai overview](pic/readme.png)
 
-A multi-agent AI companion for Chinese 高三 (senior high school) students. Not a replacement runner — a pacer that runs alongside, covering academics, planning, and emotional support throughout the year-long 高考 (Gaokao, national college entrance exam) preparation.
+A multi-agent AI companion for Chinese high-school seniors prepping for the **Gaokao** — China's nationwide college-entrance exam (think SAT, except it runs two days, you take it once, and your score is by far the biggest factor in which university you end up at). Not a replacement runner — a pacer that runs alongside, covering academics, planning, and emotional support throughout the year-long sprint.
 
 ## Why
 
 Existing AI study tools fall into two camps:
-- **Error-question utilities** (拍题搜答) — useful but transactional, no continuity
+- **Photo-and-search apps** — handy for one-off questions, but transactional, no continuity
 - **Single-subject tutors** — deep but narrow, no whole-person view
 
-Senior-year students need something that *knows them*: their weaknesses, their goals, their stress patterns, their progress. `pacer-ai` is designed around persistent student understanding accumulated across months of daily interaction.
+Seniors need something that *knows them*: their weak spots, their goals, their stress patterns, their progress. `pacer-ai` is designed around persistent student understanding accumulated across months of daily interaction.
 
 ## Core Architecture
 
 **Three collaborating agents**:
-- 🎓 **Homeroom Teacher (班主任)** — Always present. Routes intent, generates daily plans, manages cadence, fills gaps in the student profile through natural conversation.
-- 📚 **Subject Teacher (学科老师)** — One agent, six skill libraries. Loads the right subject knowledge (Math / Chinese / English / Physics / Chemistry / Biology) on demand, then hands back to homeroom.
-- 💗 **Mood Companion (心态陪伴)** — Non-judgmental listening for stress moments. Includes a red-line layer that flags self-harm signals.
+- 🎓 **Homeroom Teacher** — Always present. Routes intent, generates daily plans, manages cadence, fills gaps in the student profile through natural conversation.
+- 📚 **Subject Teacher** — One agent, six skill libraries. Loads the right subject pack (Math / Chinese-language / English / Physics / Chemistry / Biology) on demand, then hands back to homeroom.
+- 💗 **Mood Companion** — Non-judgmental listening for stress moments. Includes a red-line layer that flags self-harm signals.
 
 **Daily companion loop**:
 ```
