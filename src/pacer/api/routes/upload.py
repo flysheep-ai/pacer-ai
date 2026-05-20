@@ -16,9 +16,21 @@ async def upload_image(
 ):
     if file.content_type not in ("image/jpeg", "image/png", "image/webp"):
         raise HTTPException(status_code=400, detail="unsupported image type")
-    content = await file.read()
-    b64 = base64.b64encode(content).decode("ascii")
     settings = get_settings()
+    max_bytes = settings.upload_max_bytes
+    # Read in chunks so we can reject oversize uploads without loading them all.
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail=f"image exceeds {max_bytes} bytes")
+        chunks.append(chunk)
+    content = b"".join(chunks)
+    b64 = base64.b64encode(content).decode("ascii")
     tool = VisionUnderstandImageTool(llm=request.app.state.llm, model=settings.main_model)
     result = await tool.execute(image_base64=b64, hint=None)
     return {
