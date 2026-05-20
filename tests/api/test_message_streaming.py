@@ -12,7 +12,7 @@ from pacer.api.routes.message import _streaming_tasks
 from pacer.api.server import create_app
 from pacer.api.deps import hash_pin
 from pacer.db.models import Base, Message, Student
-from pacer.llm.client import LLMClient, LLMResponse, StreamChunk
+from pacer.llm.client import LLMResponse
 
 
 @pytest.mark.asyncio
@@ -49,26 +49,25 @@ async def test_streaming_send_returns_ack_and_finalizes_message(tmp_path, monkey
                 output_tokens=5,
                 raw=None,
             )
-        elif _call_count <= 5:
-            # Agent loop non-last iterations — return tool_calls
-            # so the loop continues until the last iteration where chat_stream() is used
+        elif _call_count <= 3:
+            # Agent loop early iterations — call a tool that exists on homeroom.
             return LLMResponse(
                 text="",
                 tool_calls=[
                     {
                         "id": f"call_{_call_count}",
-                        "name": "delegate_to_subject_teacher",
-                        "input": {"subject": "math", "reason": "testing"},
+                        "name": "get_today_plan",
+                        "input": {},
                     },
                 ],
-                stop_reason="end_turn",
+                stop_reason="tool_use",
                 input_tokens=10,
                 output_tokens=5,
                 raw=None,
             )
-        # Fallback (should not be reached)
+        # Final turn: text-only response gets chunk-emitted by the agent loop.
         return LLMResponse(
-            text="Done",
+            text="这是一道导数题，先看条件…",
             tool_calls=[],
             stop_reason="end_turn",
             input_tokens=10,
@@ -76,19 +75,11 @@ async def test_streaming_send_returns_ack_and_finalizes_message(tmp_path, monkey
             raw=None,
         )
 
-    async def _mock_stream(*args, **kwargs):
-        for text in ["这是", "一道", "导数题"]:
-            yield StreamChunk(delta_text=text)
-            await asyncio.sleep(0)
-        yield StreamChunk(delta_text="", finish_reason="end_turn")
-
     with patch(
         "pacer.llm.client.LLMClient.chat",
         new=AsyncMock(side_effect=_mock_chat),
     ):
-        with patch.object(
-            LLMClient, "chat_stream", _mock_stream,
-        ):
+        if True:
             transport = httpx.ASGITransport(app=app)
             async with httpx.AsyncClient(
                 transport=transport, base_url="http://test",
