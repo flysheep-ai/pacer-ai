@@ -4,6 +4,8 @@
 
 [简体中文](README.zh-CN.md) · **English**
 
+![pacer-ai overview](pic/readme.png)
+
 A multi-agent AI companion for Chinese 高三 (senior high school) students. Not a replacement runner — a pacer that runs alongside, covering academics, planning, and emotional support throughout the year-long 高考 (Gaokao, national college entrance exam) preparation.
 
 ## Why
