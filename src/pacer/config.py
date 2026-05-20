@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     host: str = Field("127.0.0.1", alias="PACER_HOST")
     port: int = Field(8000, alias="PACER_PORT")
     pin_length: int = Field(6, alias="PACER_PIN_LENGTH")
+    cors_origins: str = Field("", alias="PACER_CORS_ORIGINS")
+    token_ttl_seconds: int = Field(60 * 60 * 24 * 7, alias="PACER_TOKEN_TTL_SECONDS")
+    upload_max_bytes: int = Field(10 * 1024 * 1024, alias="PACER_UPLOAD_MAX_BYTES")
+    login_max_attempts: int = Field(5, alias="PACER_LOGIN_MAX_ATTEMPTS")
+    login_lockout_seconds: int = Field(300, alias="PACER_LOGIN_LOCKOUT_SECONDS")
+    memory_summarize_interval: int = Field(3, alias="PACER_MEMORY_SUMMARIZE_INTERVAL")
 
 
 def get_settings() -> Settings:
