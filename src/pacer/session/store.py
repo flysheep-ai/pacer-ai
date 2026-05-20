@@ -1,7 +1,33 @@
 from __future__ import annotations
+import json
 from datetime import datetime, timezone
+from typing import Any
 from sqlalchemy.orm import Session
 from pacer.db.models import ChatSession, Message
+
+
+def _decode_message_content(raw: str) -> str | list[dict[str, Any]]:
+    """If `raw` is a JSON-encoded image+text payload, expand to content blocks.
+
+    Otherwise return the raw string unchanged.
+    """
+    if not raw or not raw.startswith("{"):
+        return raw
+    if "image_base64" not in raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    img = data.get("image_base64")
+    text = data.get("text") or ""
+    if not img:
+        return text or raw
+    media_type = data.get("media_type", "image/jpeg")
+    return [
+        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img}},
+        {"type": "text", "text": text},
+    ]
 
 
 class SessionStore:
@@ -46,11 +72,13 @@ class SessionStore:
         )
 
     def history_for_llm(self, session_id: int) -> list[dict]:
-        return [
-            {"role": m.role, "content": m.content}
-            for m in self.list_messages(session_id)
-            if m.role in ("user", "assistant")
-        ]
+        out: list[dict] = []
+        for m in self.list_messages(session_id):
+            if m.role not in ("user", "assistant"):
+                continue
+            content = _decode_message_content(m.content or "")
+            out.append({"role": m.role, "content": content})
+        return out
 
     def create_empty_assistant(
         self, session_id: int, *, agent: str = "homeroom", metadata: dict | None = None,

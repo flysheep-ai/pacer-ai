@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -7,6 +8,23 @@ from pacer.api.deps import get_db, current_student_id
 from pacer.db.models import ChatSession, Message
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+
+
+def _derive_title(first_user_msg: Message | None) -> str:
+    if first_user_msg is None:
+        return "新对话"
+    raw = first_user_msg.content or ""
+    # Image messages are stored as JSON {"text":..., "image_base64":...}; pull text only.
+    if raw.startswith("{") and "image_base64" in raw:
+        try:
+            data = json.loads(raw)
+            text = (data.get("text") or "").strip()
+            if text:
+                return text[:24]
+            return "[图片]"
+        except json.JSONDecodeError:
+            pass
+    return raw[:24] or "新对话"
 
 
 class SessionItem(BaseModel):
@@ -43,13 +61,16 @@ def list_sessions(
     result = []
     for s in sessions:
         msg_count = db.query(Message).filter_by(session_id=s.id).count()
-        first_msg = (
-            db.query(Message)
-            .filter_by(session_id=s.id, role="user")
-            .order_by(Message.created_at.asc())
-            .first()
-        )
-        title = first_msg.content[:24] if first_msg else "新对话"
+        if s.title:
+            title = s.title
+        else:
+            first_msg = (
+                db.query(Message)
+                .filter_by(session_id=s.id, role="user")
+                .order_by(Message.created_at.asc())
+                .first()
+            )
+            title = _derive_title(first_msg)
         last_active = s.last_active_at.isoformat() if s.last_active_at else None
         result.append(SessionItem(
             id=s.id, title=title, last_msg_at=last_active, message_count=msg_count,
@@ -66,15 +87,19 @@ def get_session(
     s = db.query(ChatSession).filter_by(id=sid, student_id=student_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="session not found")
-    first_msg = (
-        db.query(Message)
-        .filter_by(session_id=s.id, role="user")
-        .order_by(Message.created_at.asc())
-        .first()
-    )
+    if s.title:
+        title = s.title
+    else:
+        first_msg = (
+            db.query(Message)
+            .filter_by(session_id=s.id, role="user")
+            .order_by(Message.created_at.asc())
+            .first()
+        )
+        title = _derive_title(first_msg)
     return SessionItem(
         id=s.id,
-        title=first_msg.content[:24] if first_msg else "新对话",
+        title=title,
         last_msg_at=s.last_active_at.isoformat() if s.last_active_at else None,
         message_count=db.query(Message).filter_by(session_id=s.id).count(),
     )
@@ -115,8 +140,11 @@ def rename_session(
     s = db.query(ChatSession).filter_by(id=sid, student_id=student_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="session not found")
-    if not req.title or len(req.title) > 40:
+    title = (req.title or "").strip()
+    if not title or len(title) > 40:
         raise HTTPException(status_code=400, detail="title must be 1-40 characters")
+    s.title = title
+    db.commit()
     return None
 
 

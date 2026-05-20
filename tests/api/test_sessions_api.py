@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -39,7 +39,7 @@ def test_list_sessions_empty(client):
 def test_list_sessions_with_data(client):
     headers = _auth_headers(client)
     db = deps._SessionLocal()
-    sess = ChatSession(id=1, student_id=1, status="active", last_active_at=datetime.utcnow())
+    sess = ChatSession(id=1, student_id=1, status="active", last_active_at=datetime.now(timezone.utc).replace(tzinfo=None))
     db.add(sess)
     db.add(Message(id=1, session_id=1, role="user", content="Hello, how are you?"))
     db.commit()
@@ -56,7 +56,7 @@ def test_list_sessions_with_data(client):
 def test_get_session(client):
     headers = _auth_headers(client)
     db = deps._SessionLocal()
-    sess = ChatSession(id=10, student_id=1, status="active", last_active_at=datetime.utcnow())
+    sess = ChatSession(id=10, student_id=1, status="active", last_active_at=datetime.now(timezone.utc).replace(tzinfo=None))
     db.add(sess)
     db.add(Message(id=10, session_id=10, role="user", content="Test title message"))
     db.commit()
