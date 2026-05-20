@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, Text, func,
+    String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, Text, LargeBinary, func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -19,10 +19,12 @@ class Student(Base):
     school: Mapped[Optional[str]] = mapped_column(String(100))
     target_school: Mapped[Optional[str]] = mapped_column(String(100))
     stream: Mapped[Optional[str]] = mapped_column(String(10))
-    pin_hash: Mapped[str] = mapped_column(String(128))
+    pin_hash: Mapped[str] = mapped_column(String(255))
     profile_json: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    failed_login_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    login_locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class KnowledgePoint(Base):
@@ -97,6 +99,7 @@ class ChatSession(Base):
     __tablename__ = "sessions"
     id: Mapped[int] = mapped_column(primary_key=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"))
+    title: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active")
     started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -124,7 +127,10 @@ class MemoryEntry(Base):
     key: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     importance: Mapped[float] = mapped_column(Float, default=0.5)
+    # JSON-encoded text retained for backwards compat; new writes go to embedding_blob (float32 bytes).
     embedding_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    embedding_blob: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    embedding_dim: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -147,4 +153,25 @@ class PendingEvent(Base):
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"))
     event_type: Mapped[str] = mapped_column(String(50))
     data_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AuthToken(Base):
+    __tablename__ = "auth_tokens"
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class LLMUsage(Base):
+    __tablename__ = "llm_usage"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    student_id: Mapped[Optional[int]] = mapped_column(ForeignKey("students.id"), nullable=True)
+    session_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sessions.id"), nullable=True)
+    agent: Mapped[Optional[str]] = mapped_column(String(30))
+    model: Mapped[str] = mapped_column(String(80))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    iterations: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
