@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, Protocol, runtime_checkable
 from anthropic import AsyncAnthropic
 
 
@@ -26,6 +26,30 @@ class LLMResponse:
     input_tokens: int
     output_tokens: int
     raw: Any
+
+
+@runtime_checkable
+class LLMClientProtocol(Protocol):
+    model: str
+
+    async def chat(
+        self, messages: list[LLMMessage], *,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> LLMResponse: ...
+
+    def chat_stream(
+        self, messages: list[LLMMessage], *,
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> AsyncIterator[StreamChunk]: ...
+
+    async def chat_with_images(
+        self, *, system: str, user_text: str,
+        image_base64_list: list[str], model: str | None = None,
+    ) -> LLMResponse: ...
 
 
 class LLMClient:
