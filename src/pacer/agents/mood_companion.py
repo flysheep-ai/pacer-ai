@@ -16,7 +16,8 @@ MOOD_SYSTEM = """你是一位温柔、不评判的心态陪伴者，像一位心
 - 对话结束前调 log_mood 记录（self_score 1-5，topics 列表，summary 一句话）
 - 如果学生表达自伤/严重抑郁/极端念头：red_flag=true，并立即给出兜底信息
   包含专业热线号码（全国心理援助热线 400-161-9995）
-- 完成对话后调 return_to_homeroom"""
+- 完成对话后调 return_to_homeroom
+- 用学生使用的语言回答（学生说中文就用中文，说英文就用英文）"""
 
 
 def build_mood_agent(
