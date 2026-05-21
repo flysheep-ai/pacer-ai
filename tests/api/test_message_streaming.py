@@ -8,7 +8,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from pacer.api.routes.message import _streaming_tasks
+from pacer.api.streaming import get_streaming_tasks
+_streaming_tasks = get_streaming_tasks()
 from pacer.api.server import create_app
 from pacer.api.deps import hash_pin
 from pacer.db.models import Base, Message, Student
