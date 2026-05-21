@@ -65,15 +65,15 @@ async function startReview(e: ErrorRow): Promise<void> {
 </template>
 
 <style scoped>
-.page { max-width:720px; margin:0 auto; padding:var(--space-8) var(--space-6); }
-h1 { font-family:var(--font-serif); font-size:24px; margin-bottom:var(--space-6); }
-.hint,.empty { color:var(--ink-500); font-family:var(--font-serif); font-size:15px; text-align:center; padding:var(--space-12) 0; }
-.card { background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-3); }
-.meta { font-size:11px; color:var(--ink-500); margin-bottom:var(--space-2); }
-.answer { font-size:14px; color:var(--ink-700); margin-bottom:4px; }
-.explain { font-size:13px; color:var(--ink-900); margin-top:var(--space-2); border-top:1px solid var(--ink-300); padding-top:var(--space-2); }
+.page { max-width:960px; margin:0 auto; padding:var(--space-8) var(--space-6); }
+h1 { font-family:var(--font-serif); font-size:28px; margin-bottom:var(--space-6); }
+.hint,.empty { color:var(--ink-500); font-family:var(--font-serif); font-size:16px; text-align:center; padding:var(--space-12) 0; }
+.card { background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-md); padding:var(--space-6); margin-bottom:var(--space-4); }
+.meta { font-size:12px; color:var(--ink-500); margin-bottom:var(--space-2); }
+.answer { font-size:15px; color:var(--ink-700); margin-bottom:6px; }
+.explain { font-size:14px; color:var(--ink-900); margin-top:var(--space-3); border-top:1px solid var(--ink-300); padding-top:var(--space-3); }
 .actions { margin-top:var(--space-3); display:flex; justify-content:flex-end; }
-.review-btn { font-size:13px; padding:6px 12px; border:1px solid var(--ink-700); background:var(--paper-0); color:var(--ink-900); border-radius:var(--radius-sm); cursor:pointer; }
+.review-btn { font-size:14px; padding:8px 16px; border:1px solid var(--ink-700); background:var(--paper-0); color:var(--ink-900); border-radius:var(--radius-sm); cursor:pointer; }
 .review-btn:hover:not(:disabled) { background:var(--ink-900); color:var(--paper-0); }
 .review-btn:disabled { opacity:0.5; cursor:wait; }
 </style>

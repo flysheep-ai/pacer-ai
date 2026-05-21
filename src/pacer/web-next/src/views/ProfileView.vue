@@ -39,12 +39,12 @@ async function save(): Promise<void> {
   </AppShell>
 </template>
 <style scoped>
-.page { max-width:600px; margin:0 auto; padding:var(--space-8) var(--space-6); }
-h1 { font-family:var(--font-serif); font-size:24px; margin-bottom:var(--space-6); }
-.field { display:block; margin-bottom:var(--space-4); }
-.field span { display:block; font-size:13px; color:var(--ink-700); margin-bottom:4px; }
-.field input { width:100%; padding:10px 12px; background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-sm); font-size:15px; color:var(--ink-900); }
+.page { max-width:640px; margin:0 auto; padding:var(--space-8) var(--space-6); }
+h1 { font-family:var(--font-serif); font-size:28px; margin-bottom:var(--space-6); }
+.field { display:block; margin-bottom:var(--space-5); }
+.field span { display:block; font-size:14px; color:var(--ink-700); margin-bottom:var(--space-1); }
+.field input { width:100%; padding:12px 14px; background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-sm); font-size:16px; color:var(--ink-900); }
 .field input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
-.btn { padding:10px 24px; background:var(--ink-900); color:var(--paper-0); border-radius:var(--radius-sm); font-size:14px; }
-.btn:disabled { opacity:0.5; }
+.btn { padding:12px 28px; background:var(--ink-900); color:var(--paper-0); border-radius:var(--radius-sm); font-size:15px; cursor:pointer; }
+.btn:disabled { opacity:0.5; cursor:wait; }
 </style>

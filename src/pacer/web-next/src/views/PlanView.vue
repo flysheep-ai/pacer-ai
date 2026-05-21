@@ -93,18 +93,18 @@ function describe(t: Task): string {
 </template>
 
 <style scoped>
-.page { max-width:720px; margin:0 auto; padding:var(--space-8) var(--space-6); }
-h1 { font-family:var(--font-serif); font-size:24px; margin-bottom:var(--space-6); }
-.hint,.empty { color:var(--ink-500); font-family:var(--font-serif); font-size:15px; text-align:center; padding:var(--space-12) 0; }
-.card { background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-3); }
-.head { display:flex; justify-content:space-between; align-items:baseline; }
-.type { font-size:11px; color:var(--ink-500); text-transform:uppercase; letter-spacing:0.06em; }
-.progress { font-size:12px; color:var(--ink-700); }
+.page { max-width:960px; margin:0 auto; padding:var(--space-8) var(--space-6); }
+h1 { font-family:var(--font-serif); font-size:28px; margin-bottom:var(--space-6); }
+.hint,.empty { color:var(--ink-500); font-family:var(--font-serif); font-size:16px; text-align:center; padding:var(--space-12) 0; }
+.card { background:var(--paper-1); border:1px solid var(--ink-300); border-radius:var(--radius-md); padding:var(--space-6); margin-bottom:var(--space-4); }
+.head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:var(--space-1); }
+.type { font-size:12px; color:var(--ink-500); text-transform:uppercase; letter-spacing:0.06em; }
+.progress { font-size:13px; color:var(--ink-700); }
 .bar { height:4px; background:var(--ink-300); border-radius:2px; margin:var(--space-2) 0 var(--space-3); overflow:hidden; }
 .fill { height:100%; background:var(--ink-900); transition:width 0.2s; }
 .tasks { list-style:none; padding:0; margin:0; }
-.task { font-size:14px; color:var(--ink-900); padding:6px 0; }
+.task { font-size:15px; color:var(--ink-900); padding:8px 0; }
 .task label { display:flex; gap:var(--space-2); align-items:center; cursor:pointer; }
 .task.done span { color:var(--ink-500); text-decoration:line-through; }
-.feedback { font-size:13px; color:var(--ink-700); margin-top:var(--space-2); border-top:1px solid var(--ink-300); padding-top:var(--space-2); }
+.feedback { font-size:14px; color:var(--ink-700); margin-top:var(--space-3); border-top:1px solid var(--ink-300); padding-top:var(--space-3); }
 </style>
