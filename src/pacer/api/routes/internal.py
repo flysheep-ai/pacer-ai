@@ -48,6 +48,10 @@ async def handle_system_event(
         await enqueue_or_publish(request.app.state, student_id, "daily_report", text)
     elif req.type == "goodnight":
         await enqueue_or_publish(request.app.state, student_id, "goodnight", "晚安，好好休息～")
+    elif req.type == "weekly_report":
+        from pacer.companion.weekly_report import generate_weekly_report
+        text = await generate_weekly_report(db, request.app.state, student_id)
+        await enqueue_or_publish(request.app.state, student_id, "weekly_report", text)
     else:
         raise HTTPException(status_code=400, detail=f"unknown event type {req.type!r}")
     return {"status": "ok"}

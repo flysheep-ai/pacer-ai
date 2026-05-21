@@ -5,7 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from pacer.config import get_settings
-from pacer.scheduler.jobs import morning_job, error_review_job, daily_report_job, goodnight_job
+from pacer.scheduler.jobs import morning_job, error_review_job, daily_report_job, goodnight_job, weekly_report_job
 
 
 def main():
@@ -27,7 +27,8 @@ def main():
     sched.add_job(_wrap(error_review_job), CronTrigger(hour=18, minute=0))
     sched.add_job(_wrap(daily_report_job), CronTrigger(hour=21, minute=30))
     sched.add_job(_wrap(goodnight_job), CronTrigger(hour=22, minute=30))
-    print("[scheduler] starting with 4 jobs (Asia/Shanghai)...")
+    sched.add_job(_wrap(weekly_report_job), CronTrigger(day_of_week="sun", hour=21, minute=0))
+    print("[scheduler] starting with 5 jobs (Asia/Shanghai)...")
     sched.start()
 
 
