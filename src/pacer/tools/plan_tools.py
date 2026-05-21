@@ -1,4 +1,5 @@
 from __future__ import annotations
+import uuid
 from datetime import date, datetime, timezone
 from pacer.tools.base import StudentScopedTool
 from pacer.db.models import Plan
@@ -39,12 +40,18 @@ class CreatePlanTool(StudentScopedTool):
 
     async def execute(self, *, type: str, tasks: list[dict]) -> dict:
         sess = self._session_factory()
+        # Stamp every task with a stable id + explicit done flag so the
+        # frontend can toggle individual rows. Caller-supplied id/done win.
+        decorated = [
+            {**t, "id": t.get("id") or str(uuid.uuid4()), "done": bool(t.get("done", False))}
+            for t in tasks
+        ]
         plan = Plan(
             student_id=self._student_id, date=datetime.now(timezone.utc),
-            type=type, tasks_json=tasks, generated_by="homeroom",
+            type=type, tasks_json=decorated, generated_by="homeroom",
         )
         sess.add(plan); sess.commit(); sess.refresh(plan)
-        return {"plan_id": plan.id, "tasks": tasks}
+        return {"plan_id": plan.id, "tasks": decorated}
 
 
 class UpdatePlanTool(StudentScopedTool):
