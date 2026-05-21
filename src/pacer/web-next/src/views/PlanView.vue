@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { apiFetch } from '@/api/client'
 import AppShell from '@/components/AppShell.vue'
 
 type Task = {
-  id: string
+  id?: string
   subject?: string
   duration_min?: number
   note?: string
@@ -20,6 +20,7 @@ type Plan = {
 
 const plans = ref<Plan[]>([])
 const loading = ref(true)
+const inFlight = reactive(new Set<string>())
 
 onMounted(async () => {
   try { const r = await apiFetch<{ items: Plan[] }>('/plans'); plans.value = r.items || [] }
@@ -34,16 +35,20 @@ function progress(p: Plan): { done: number; total: number; pct: number } {
 }
 
 async function toggleTask(plan: Plan, task: Task): Promise<void> {
-  if (!task.id) return  // legacy unmigrated row — backfill not yet run
+  if (!task.id || inFlight.has(task.id)) return
+  const id = task.id
+  inFlight.add(id)
   const before = task.done === true
   task.done = !before
   try {
-    await apiFetch(`/plans/${plan.id}/tasks/${task.id}`, {
+    await apiFetch(`/plans/${plan.id}/tasks/${id}`, {
       method: 'PATCH',
       json: { done: task.done },
     })
   } catch {
     task.done = before
+  } finally {
+    inFlight.delete(id)
   }
 }
 
@@ -71,7 +76,12 @@ function describe(t: Task): string {
         <ul class="tasks">
           <li v-for="t in p.tasks" :key="t.id ?? Math.random()" class="task" :class="{ done: t.done }">
             <label>
-              <input type="checkbox" :checked="t.done === true" :disabled="!t.id" @change="toggleTask(p, t)" />
+              <input
+                type="checkbox"
+                :checked="t.done === true"
+                :disabled="!t.id || (!!t.id && inFlight.has(t.id))"
+                @change="toggleTask(p, t)"
+              />
               <span>{{ describe(t) }}</span>
             </label>
           </li>
