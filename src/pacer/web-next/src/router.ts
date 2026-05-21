@@ -14,6 +14,7 @@ export function createRouter(): Router {
       { path: '/me', name: 'me', component: () => import('@/views/ProfileView.vue') },
       { path: '/errors', name: 'errors', component: () => import('@/views/ErrorsView.vue') },
       { path: '/plan', name: 'plan', component: () => import('@/views/PlanView.vue') },
+      { path: '/mastery', name: 'mastery', component: () => import('@/views/MasteryView.vue') },
       { path: '/:path(.*)*', redirect: '/' },
     ],
   })

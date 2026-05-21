@@ -73,6 +73,7 @@ async function deleteChat(sid: number): Promise<void> {
     <button class="row" type="button" @click="router.push('/me')">个人中心</button>
     <button class="row" type="button" @click="router.push('/errors')">错题本</button>
     <button class="row" type="button" @click="router.push('/plan')">学习计划</button>
+    <button class="row" type="button" @click="router.push('/mastery')">学习掌握度</button>
 
     <div class="section">历史会话</div>
     <div v-if="session.loading" class="hint">…</div>
