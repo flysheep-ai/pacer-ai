@@ -36,5 +36,6 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 data/
+!data/knowledge_points.yaml
 logs/
 *.log

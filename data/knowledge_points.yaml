@@ -1,0 +1,1050 @@
+# pacer-ai knowledge point seeds — ~200 entries across 6 Gaokao subjects
+# Stable id = md5(f"{subject}|{name}") truncated to 31 bits
+# Re-running scripts/seed_knowledge_points.py is idempotent
+
+math:
+  - name: 集合的基本运算
+    chapter: 集合与简易逻辑
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 命题与充要条件
+    chapter: 集合与简易逻辑
+    difficulty: 2
+    prereqs: [集合的基本运算]
+    exam_freq: 4
+  - name: 函数的定义域与值域
+    chapter: 函数概念与性质
+    difficulty: 2
+    prereqs: [集合的基本运算]
+    exam_freq: 5
+  - name: 函数的单调性
+    chapter: 函数概念与性质
+    difficulty: 2
+    prereqs: [函数的定义域与值域]
+    exam_freq: 5
+  - name: 函数的奇偶性
+    chapter: 函数概念与性质
+    difficulty: 2
+    prereqs: [函数的定义域与值域]
+    exam_freq: 4
+  - name: 函数的周期性
+    chapter: 函数概念与性质
+    difficulty: 3
+    prereqs: [函数的奇偶性]
+    exam_freq: 3
+  - name: 二次函数的图像与性质
+    chapter: 函数概念与性质
+    difficulty: 2
+    prereqs: [函数的单调性]
+    exam_freq: 5
+  - name: 指数与对数运算
+    chapter: 基本初等函数
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 指数函数
+    chapter: 基本初等函数
+    difficulty: 2
+    prereqs: [指数与对数运算, 函数的单调性]
+    exam_freq: 4
+  - name: 对数函数
+    chapter: 基本初等函数
+    difficulty: 2
+    prereqs: [指数与对数运算, 指数函数]
+    exam_freq: 4
+  - name: 幂函数
+    chapter: 基本初等函数
+    difficulty: 3
+    prereqs: [指数函数]
+    exam_freq: 3
+  - name: 函数与方程
+    chapter: 基本初等函数
+    difficulty: 3
+    prereqs: [二次函数的图像与性质]
+    exam_freq: 4
+  - name: 导数的定义与几何意义
+    chapter: 导数及其应用
+    difficulty: 3
+    prereqs: [函数的单调性]
+    exam_freq: 5
+  - name: 基本导数公式
+    chapter: 导数及其应用
+    difficulty: 2
+    prereqs: [导数的定义与几何意义]
+    exam_freq: 5
+  - name: 导数的四则运算
+    chapter: 导数及其应用
+    difficulty: 2
+    prereqs: [基本导数公式]
+    exam_freq: 5
+  - name: 复合函数求导
+    chapter: 导数及其应用
+    difficulty: 3
+    prereqs: [基本导数公式, 导数的四则运算]
+    exam_freq: 5
+  - name: 利用导数研究函数单调性
+    chapter: 导数及其应用
+    difficulty: 3
+    prereqs: [复合函数求导, 函数的单调性]
+    exam_freq: 5
+  - name: 利用导数求极值与最值
+    chapter: 导数及其应用
+    difficulty: 3
+    prereqs: [利用导数研究函数单调性]
+    exam_freq: 5
+  - name: 导数的实际应用问题
+    chapter: 导数及其应用
+    difficulty: 4
+    prereqs: [利用导数求极值与最值]
+    exam_freq: 4
+  - name: 任意角与弧度制
+    chapter: 三角函数
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 三角函数的定义
+    chapter: 三角函数
+    difficulty: 2
+    prereqs: [任意角与弧度制]
+    exam_freq: 4
+  - name: 同角三角函数关系
+    chapter: 三角函数
+    difficulty: 2
+    prereqs: [三角函数的定义]
+    exam_freq: 4
+  - name: 三角函数的图像与性质
+    chapter: 三角函数
+    difficulty: 2
+    prereqs: [三角函数的定义]
+    exam_freq: 5
+  - name: 三角恒等变换
+    chapter: 三角函数
+    difficulty: 3
+    prereqs: [同角三角函数关系, 三角函数的图像与性质]
+    exam_freq: 5
+  - name: 正弦定理与余弦定理
+    chapter: 解三角形
+    difficulty: 2
+    prereqs: [三角函数的定义]
+    exam_freq: 5
+  - name: 三角形面积公式
+    chapter: 解三角形
+    difficulty: 2
+    prereqs: [正弦定理与余弦定理]
+    exam_freq: 4
+  - name: 数列的概念与通项
+    chapter: 数列
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 等差数列
+    chapter: 数列
+    difficulty: 2
+    prereqs: [数列的概念与通项]
+    exam_freq: 5
+  - name: 等比数列
+    chapter: 数列
+    difficulty: 2
+    prereqs: [数列的概念与通项]
+    exam_freq: 5
+  - name: 数列求和
+    chapter: 数列
+    difficulty: 3
+    prereqs: [等差数列, 等比数列]
+    exam_freq: 5
+  - name: 平面向量基本概念
+    chapter: 平面向量
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 向量的坐标表示
+    chapter: 平面向量
+    difficulty: 2
+    prereqs: [平面向量基本概念]
+    exam_freq: 4
+  - name: 向量的数量积
+    chapter: 平面向量
+    difficulty: 2
+    prereqs: [向量的坐标表示]
+    exam_freq: 5
+  - name: 直线的方程
+    chapter: 解析几何
+    difficulty: 2
+    prereqs: [向量的坐标表示]
+    exam_freq: 4
+  - name: 圆的方程
+    chapter: 解析几何
+    difficulty: 2
+    prereqs: [直线的方程]
+    exam_freq: 5
+  - name: 椭圆
+    chapter: 解析几何
+    difficulty: 3
+    prereqs: [圆的方程]
+    exam_freq: 5
+  - name: 双曲线
+    chapter: 解析几何
+    difficulty: 4
+    prereqs: [椭圆]
+    exam_freq: 4
+  - name: 抛物线
+    chapter: 解析几何
+    difficulty: 3
+    prereqs: [圆的方程]
+    exam_freq: 4
+  - name: 概率的基本概念
+    chapter: 概率与统计
+    difficulty: 1
+    prereqs: [集合的基本运算]
+    exam_freq: 3
+  - name: 古典概型
+    chapter: 概率与统计
+    difficulty: 2
+    prereqs: [概率的基本概念]
+    exam_freq: 4
+  - name: 条件概率与独立事件
+    chapter: 概率与统计
+    difficulty: 3
+    prereqs: [古典概型]
+    exam_freq: 4
+
+chinese:
+  - name: 文言文实词辨析
+    chapter: 文言文阅读
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 文言文虚词用法
+    chapter: 文言文阅读
+    difficulty: 3
+    prereqs: [文言文实词辨析]
+    exam_freq: 5
+  - name: 文言文翻译
+    chapter: 文言文阅读
+    difficulty: 3
+    prereqs: [文言文实词辨析, 文言文虚词用法]
+    exam_freq: 5
+  - name: 文言断句
+    chapter: 文言文阅读
+    difficulty: 3
+    prereqs: [文言文虚词用法]
+    exam_freq: 4
+  - name: 古代文化常识
+    chapter: 文言文阅读
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+  - name: 古诗词鉴赏意象分析
+    chapter: 古诗词鉴赏
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 古诗词表达技巧
+    chapter: 古诗词鉴赏
+    difficulty: 3
+    prereqs: [古诗词鉴赏意象分析]
+    exam_freq: 5
+  - name: 古诗词思想情感
+    chapter: 古诗词鉴赏
+    difficulty: 3
+    prereqs: [古诗词鉴赏意象分析]
+    exam_freq: 5
+  - name: 论述类文本阅读
+    chapter: 现代文阅读
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 文学类文本阅读（小说）
+    chapter: 现代文阅读
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 文学类文本阅读（散文）
+    chapter: 现代文阅读
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 实用类文本阅读
+    chapter: 现代文阅读
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 议论文审题立意
+    chapter: 写作
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 议论文结构安排
+    chapter: 写作
+    difficulty: 3
+    prereqs: [议论文审题立意]
+    exam_freq: 5
+  - name: 议论文论据运用
+    chapter: 写作
+    difficulty: 2
+    prereqs: [议论文审题立意]
+    exam_freq: 5
+  - name: 作文语言表达
+    chapter: 写作
+    difficulty: 4
+    prereqs: [议论文结构安排, 议论文论据运用]
+    exam_freq: 4
+  - name: 字音字形辨析
+    chapter: 语言文字运用
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 成语与熟语
+    chapter: 语言文字运用
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 病句辨析与修改
+    chapter: 语言文字运用
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 句式变换与仿写
+    chapter: 语言文字运用
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+  - name: 语言表达连贯得体
+    chapter: 语言文字运用
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 名篇名句默写
+    chapter: 古诗文背诵
+    difficulty: 1
+    prereqs: []
+    exam_freq: 5
+  - name: 诗歌体裁知识
+    chapter: 古诗词鉴赏
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+  - name: 小说情节分析
+    chapter: 现代文阅读
+    difficulty: 3
+    prereqs: [文学类文本阅读（小说）]
+    exam_freq: 5
+  - name: 小说人物形象分析
+    chapter: 现代文阅读
+    difficulty: 3
+    prereqs: [文学类文本阅读（小说）]
+    exam_freq: 5
+  - name: 散文主旨把握
+    chapter: 现代文阅读
+    difficulty: 4
+    prereqs: [文学类文本阅读（散文）]
+    exam_freq: 4
+  - name: 信息筛选与概括
+    chapter: 现代文阅读
+    difficulty: 2
+    prereqs: [论述类文本阅读]
+    exam_freq: 4
+  - name: 文言句式倒装
+    chapter: 文言文阅读
+    difficulty: 4
+    prereqs: [文言文虚词用法]
+    exam_freq: 4
+  - name: 古诗词形象分析
+    chapter: 古诗词鉴赏
+    difficulty: 3
+    prereqs: [古诗词鉴赏意象分析]
+    exam_freq: 4
+  - name: 材料作文审题
+    chapter: 写作
+    difficulty: 3
+    prereqs: [议论文审题立意]
+    exam_freq: 5
+
+english:
+  - name: 时态总览
+    chapter: 动词时态与语态
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 完成时的用法
+    chapter: 动词时态与语态
+    difficulty: 3
+    prereqs: [时态总览]
+    exam_freq: 5
+  - name: 被动语态
+    chapter: 动词时态与语态
+    difficulty: 2
+    prereqs: [时态总览]
+    exam_freq: 4
+  - name: 情态动词
+    chapter: 动词时态与语态
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 非谓语动词总论
+    chapter: 非谓语动词
+    difficulty: 3
+    prereqs: [时态总览]
+    exam_freq: 5
+  - name: 不定式的用法
+    chapter: 非谓语动词
+    difficulty: 2
+    prereqs: [非谓语动词总论]
+    exam_freq: 5
+  - name: 动名词与现在分词
+    chapter: 非谓语动词
+    difficulty: 3
+    prereqs: [非谓语动词总论]
+    exam_freq: 4
+  - name: 过去分词的用法
+    chapter: 非谓语动词
+    difficulty: 3
+    prereqs: [非谓语动词总论, 被动语态]
+    exam_freq: 4
+  - name: 定语从句
+    chapter: 从句
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 名词性从句
+    chapter: 从句
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 状语从句
+    chapter: 从句
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 虚拟语气
+    chapter: 从句
+    difficulty: 4
+    prereqs: [时态总览, 状语从句]
+    exam_freq: 5
+  - name: 倒装句
+    chapter: 特殊句式
+    difficulty: 3
+    prereqs: [时态总览]
+    exam_freq: 4
+  - name: 强调句与省略句
+    chapter: 特殊句式
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+  - name: 主谓一致
+    chapter: 语法综合
+    difficulty: 2
+    prereqs: [时态总览]
+    exam_freq: 4
+  - name: 冠词与名词
+    chapter: 语法综合
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 代词与介词
+    chapter: 语法综合
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+  - name: 阅读主旨大意题
+    chapter: 阅读理解
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 阅读细节理解题
+    chapter: 阅读理解
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 阅读推理判断题
+    chapter: 阅读理解
+    difficulty: 3
+    prereqs: [阅读细节理解题, 阅读主旨大意题]
+    exam_freq: 5
+  - name: 阅读词义猜测题
+    chapter: 阅读理解
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 七选五阅读
+    chapter: 阅读理解
+    difficulty: 3
+    prereqs: [阅读细节理解题]
+    exam_freq: 5
+  - name: 完形填空上下文理解
+    chapter: 完形填空
+    difficulty: 3
+    prereqs: [阅读细节理解题]
+    exam_freq: 5
+  - name: 完形填空词汇辨析
+    chapter: 完形填空
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 语法填空词性转换
+    chapter: 语法填空
+    difficulty: 2
+    prereqs: [非谓语动词总论, 定语从句]
+    exam_freq: 4
+  - name: 语法填空无提示词
+    chapter: 语法填空
+    difficulty: 3
+    prereqs: [冠词与名词, 代词与介词, 定语从句]
+    exam_freq: 4
+  - name: 短文改错
+    chapter: 写作
+    difficulty: 3
+    prereqs: [时态总览, 主谓一致, 非谓语动词总论]
+    exam_freq: 4
+  - name: 应用文写作
+    chapter: 写作
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 读后续写
+    chapter: 写作
+    difficulty: 4
+    prereqs: [阅读细节理解题, 时态总览, 非谓语动词总论]
+    exam_freq: 5
+  - name: 核心词汇搭配
+    chapter: 词汇积累
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 派生词与构词法
+    chapter: 词汇积累
+    difficulty: 2
+    prereqs: []
+    exam_freq: 3
+
+physics:
+  - name: 质点与参考系
+    chapter: 运动的描述
+    difficulty: 1
+    prereqs: []
+    exam_freq: 2
+  - name: 位移速度加速度
+    chapter: 运动的描述
+    difficulty: 2
+    prereqs: [质点与参考系]
+    exam_freq: 4
+  - name: 匀变速直线运动
+    chapter: 匀变速直线运动
+    difficulty: 2
+    prereqs: [位移速度加速度]
+    exam_freq: 5
+  - name: 自由落体与竖直上抛
+    chapter: 匀变速直线运动
+    difficulty: 2
+    prereqs: [匀变速直线运动]
+    exam_freq: 4
+  - name: 重力弹力摩擦力
+    chapter: 相互作用
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 力的合成与分解
+    chapter: 相互作用
+    difficulty: 2
+    prereqs: [重力弹力摩擦力]
+    exam_freq: 5
+  - name: 共点力平衡
+    chapter: 相互作用
+    difficulty: 3
+    prereqs: [力的合成与分解]
+    exam_freq: 5
+  - name: 牛顿第一定律
+    chapter: 牛顿运动定律
+    difficulty: 1
+    prereqs: [位移速度加速度]
+    exam_freq: 3
+  - name: 牛顿第二定律
+    chapter: 牛顿运动定律
+    difficulty: 3
+    prereqs: [力的合成与分解, 牛顿第一定律]
+    exam_freq: 5
+  - name: 牛顿第三定律
+    chapter: 牛顿运动定律
+    difficulty: 1
+    prereqs: [牛顿第一定律]
+    exam_freq: 3
+  - name: 超重与失重
+    chapter: 牛顿运动定律
+    difficulty: 2
+    prereqs: [牛顿第二定律]
+    exam_freq: 3
+  - name: 连接体问题
+    chapter: 牛顿运动定律
+    difficulty: 4
+    prereqs: [牛顿第二定律]
+    exam_freq: 4
+  - name: 曲线运动基本概念
+    chapter: 曲线运动
+    difficulty: 2
+    prereqs: [位移速度加速度]
+    exam_freq: 3
+  - name: 平抛运动
+    chapter: 曲线运动
+    difficulty: 2
+    prereqs: [匀变速直线运动, 曲线运动基本概念]
+    exam_freq: 5
+  - name: 匀速圆周运动
+    chapter: 曲线运动
+    difficulty: 3
+    prereqs: [曲线运动基本概念]
+    exam_freq: 5
+  - name: 万有引力定律
+    chapter: 万有引力与航天
+    difficulty: 3
+    prereqs: [匀速圆周运动]
+    exam_freq: 4
+  - name: 卫星变轨与宇宙速度
+    chapter: 万有引力与航天
+    difficulty: 4
+    prereqs: [万有引力定律]
+    exam_freq: 4
+  - name: 功与功率
+    chapter: 机械能
+    difficulty: 2
+    prereqs: [力的合成与分解]
+    exam_freq: 4
+  - name: 动能定理
+    chapter: 机械能
+    difficulty: 3
+    prereqs: [功与功率]
+    exam_freq: 5
+  - name: 机械能守恒定律
+    chapter: 机械能
+    difficulty: 3
+    prereqs: [动能定理]
+    exam_freq: 5
+  - name: 动量与冲量
+    chapter: 动量守恒
+    difficulty: 3
+    prereqs: [牛顿第二定律]
+    exam_freq: 4
+  - name: 动量守恒定律
+    chapter: 动量守恒
+    difficulty: 3
+    prereqs: [动量与冲量]
+    exam_freq: 5
+  - name: 库仑定律
+    chapter: 静电场
+    difficulty: 2
+    prereqs: [力的合成与分解]
+    exam_freq: 4
+  - name: 电场强度与电场线
+    chapter: 静电场
+    difficulty: 2
+    prereqs: [库仑定律]
+    exam_freq: 5
+  - name: 电势与电势差
+    chapter: 静电场
+    difficulty: 3
+    prereqs: [电场强度与电场线]
+    exam_freq: 5
+  - name: 电容器
+    chapter: 静电场
+    difficulty: 3
+    prereqs: [电势与电势差]
+    exam_freq: 4
+  - name: 带电粒子在电场中的运动
+    chapter: 静电场
+    difficulty: 4
+    prereqs: [电场强度与电场线, 牛顿第二定律]
+    exam_freq: 5
+  - name: 欧姆定律与电阻
+    chapter: 恒定电流
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 电功电功率焦耳定律
+    chapter: 恒定电流
+    difficulty: 2
+    prereqs: [欧姆定律与电阻]
+    exam_freq: 4
+  - name: 闭合电路欧姆定律
+    chapter: 恒定电流
+    difficulty: 3
+    prereqs: [欧姆定律与电阻, 电功电功率焦耳定律]
+    exam_freq: 5
+  - name: 安培力
+    chapter: 磁场
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 洛伦兹力
+    chapter: 磁场
+    difficulty: 3
+    prereqs: [安培力, 匀速圆周运动]
+    exam_freq: 5
+  - name: 电磁感应现象
+    chapter: 电磁感应
+    difficulty: 3
+    prereqs: [电场强度与电场线, 洛伦兹力]
+    exam_freq: 5
+  - name: 法拉第电磁感应定律
+    chapter: 电磁感应
+    difficulty: 3
+    prereqs: [电磁感应现象]
+    exam_freq: 5
+  - name: 楞次定律
+    chapter: 电磁感应
+    difficulty: 3
+    prereqs: [电磁感应现象]
+    exam_freq: 4
+
+chemistry:
+  - name: 物质的量
+    chapter: 化学计量
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 阿伏伽德罗常数
+    chapter: 化学计量
+    difficulty: 2
+    prereqs: [物质的量]
+    exam_freq: 5
+  - name: 气体摩尔体积
+    chapter: 化学计量
+    difficulty: 2
+    prereqs: [物质的量]
+    exam_freq: 3
+  - name: 物质的量浓度
+    chapter: 化学计量
+    difficulty: 2
+    prereqs: [物质的量]
+    exam_freq: 5
+  - name: 离子反应
+    chapter: 化学反应基础
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 离子共存问题
+    chapter: 化学反应基础
+    difficulty: 3
+    prereqs: [离子反应]
+    exam_freq: 5
+  - name: 氧化还原反应
+    chapter: 化学反应基础
+    difficulty: 3
+    prereqs: []
+    exam_freq: 5
+  - name: 氧化还原配平
+    chapter: 化学反应基础
+    difficulty: 3
+    prereqs: [氧化还原反应]
+    exam_freq: 4
+  - name: 钠及其化合物
+    chapter: 金属元素
+    difficulty: 2
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 4
+  - name: 铝及其化合物
+    chapter: 金属元素
+    difficulty: 3
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 4
+  - name: 铁及其化合物
+    chapter: 金属元素
+    difficulty: 3
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 5
+  - name: 铜及其化合物
+    chapter: 金属元素
+    difficulty: 2
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 3
+  - name: 氯及其化合物
+    chapter: 非金属元素
+    difficulty: 2
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 4
+  - name: 硫及其化合物
+    chapter: 非金属元素
+    difficulty: 3
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 5
+  - name: 氮及其化合物
+    chapter: 非金属元素
+    difficulty: 3
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 5
+  - name: 硅及其化合物
+    chapter: 非金属元素
+    difficulty: 2
+    prereqs: [离子反应, 氧化还原反应]
+    exam_freq: 3
+  - name: 元素周期表
+    chapter: 元素周期律
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 元素周期律
+    chapter: 元素周期律
+    difficulty: 3
+    prereqs: [元素周期表]
+    exam_freq: 5
+  - name: 化学键与分子间作用力
+    chapter: 物质结构
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 分子构型与杂化轨道
+    chapter: 物质结构
+    difficulty: 3
+    prereqs: [化学键与分子间作用力]
+    exam_freq: 3
+  - name: 晶体类型
+    chapter: 物质结构
+    difficulty: 2
+    prereqs: [化学键与分子间作用力]
+    exam_freq: 3
+  - name: 化学反应速率
+    chapter: 化学反应速率与平衡
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 化学平衡
+    chapter: 化学反应速率与平衡
+    difficulty: 3
+    prereqs: [化学反应速率]
+    exam_freq: 5
+  - name: 勒夏特列原理
+    chapter: 化学反应速率与平衡
+    difficulty: 3
+    prereqs: [化学平衡]
+    exam_freq: 5
+  - name: 化学平衡常数
+    chapter: 化学反应速率与平衡
+    difficulty: 3
+    prereqs: [化学平衡]
+    exam_freq: 5
+  - name: 弱电解质的电离
+    chapter: 水溶液中的离子平衡
+    difficulty: 3
+    prereqs: [离子反应, 化学平衡]
+    exam_freq: 5
+  - name: 水的离子积与pH
+    chapter: 水溶液中的离子平衡
+    difficulty: 2
+    prereqs: [弱电解质的电离]
+    exam_freq: 5
+  - name: 盐类水解
+    chapter: 水溶液中的离子平衡
+    difficulty: 3
+    prereqs: [弱电解质的电离]
+    exam_freq: 5
+  - name: 难溶电解质溶解平衡
+    chapter: 水溶液中的离子平衡
+    difficulty: 3
+    prereqs: [化学平衡常数]
+    exam_freq: 4
+  - name: 原电池
+    chapter: 电化学
+    difficulty: 3
+    prereqs: [氧化还原反应]
+    exam_freq: 5
+  - name: 电解池
+    chapter: 电化学
+    difficulty: 3
+    prereqs: [氧化还原反应, 原电池]
+    exam_freq: 5
+  - name: 有机物分类与命名
+    chapter: 有机化学基础
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 烷烃与同分异构
+    chapter: 有机化学基础
+    difficulty: 2
+    prereqs: [有机物分类与命名]
+    exam_freq: 4
+  - name: 乙烯与烯烃加成反应
+    chapter: 有机化学基础
+    difficulty: 2
+    prereqs: [有机物分类与命名]
+    exam_freq: 4
+  - name: 苯及芳香烃
+    chapter: 有机化学基础
+    difficulty: 3
+    prereqs: [有机物分类与命名]
+    exam_freq: 4
+
+biology:
+  - name: 细胞的分子组成
+    chapter: 细胞的物质基础
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 蛋白质的结构与功能
+    chapter: 细胞的物质基础
+    difficulty: 2
+    prereqs: [细胞的分子组成]
+    exam_freq: 5
+  - name: 核酸的结构与功能
+    chapter: 细胞的物质基础
+    difficulty: 2
+    prereqs: [细胞的分子组成]
+    exam_freq: 5
+  - name: 糖类与脂质
+    chapter: 细胞的物质基础
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 细胞膜的结构与功能
+    chapter: 细胞的结构
+    difficulty: 2
+    prereqs: [蛋白质的结构与功能, 糖类与脂质]
+    exam_freq: 4
+  - name: 细胞器的结构与功能
+    chapter: 细胞的结构
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 细胞核的结构与功能
+    chapter: 细胞的结构
+    difficulty: 2
+    prereqs: [核酸的结构与功能]
+    exam_freq: 3
+  - name: 物质跨膜运输
+    chapter: 细胞代谢
+    difficulty: 2
+    prereqs: [细胞膜的结构与功能]
+    exam_freq: 4
+  - name: 酶的本质与特性
+    chapter: 细胞代谢
+    difficulty: 2
+    prereqs: [蛋白质的结构与功能]
+    exam_freq: 5
+  - name: ATP的结构与功能
+    chapter: 细胞代谢
+    difficulty: 1
+    prereqs: [核酸的结构与功能]
+    exam_freq: 4
+  - name: 有氧呼吸
+    chapter: 细胞呼吸
+    difficulty: 3
+    prereqs: [酶的本质与特性, 细胞器的结构与功能]
+    exam_freq: 5
+  - name: 无氧呼吸
+    chapter: 细胞呼吸
+    difficulty: 2
+    prereqs: [有氧呼吸]
+    exam_freq: 4
+  - name: 光合色素与光反应
+    chapter: 光合作用
+    difficulty: 3
+    prereqs: [细胞器的结构与功能]
+    exam_freq: 5
+  - name: 暗反应与C3/C4
+    chapter: 光合作用
+    difficulty: 3
+    prereqs: [光合色素与光反应]
+    exam_freq: 5
+  - name: 光合作用影响因素
+    chapter: 光合作用
+    difficulty: 3
+    prereqs: [暗反应与C3/C4]
+    exam_freq: 5
+  - name: 有丝分裂
+    chapter: 细胞增殖
+    difficulty: 2
+    prereqs: [细胞核的结构与功能, 核酸的结构与功能]
+    exam_freq: 5
+  - name: 减数分裂
+    chapter: 细胞增殖
+    difficulty: 3
+    prereqs: [有丝分裂]
+    exam_freq: 5
+  - name: 细胞分化与全能性
+    chapter: 细胞增殖
+    difficulty: 2
+    prereqs: [有丝分裂]
+    exam_freq: 3
+  - name: 孟德尔分离定律
+    chapter: 遗传的基本规律
+    difficulty: 2
+    prereqs: [减数分裂]
+    exam_freq: 5
+  - name: 孟德尔自由组合定律
+    chapter: 遗传的基本规律
+    difficulty: 3
+    prereqs: [孟德尔分离定律]
+    exam_freq: 5
+  - name: 伴性遗传
+    chapter: 遗传的基本规律
+    difficulty: 3
+    prereqs: [孟德尔分离定律]
+    exam_freq: 4
+  - name: DNA复制
+    chapter: 遗传的分子基础
+    difficulty: 2
+    prereqs: [核酸的结构与功能]
+    exam_freq: 5
+  - name: 转录
+    chapter: 遗传的分子基础
+    difficulty: 2
+    prereqs: [DNA复制]
+    exam_freq: 5
+  - name: 翻译
+    chapter: 遗传的分子基础
+    difficulty: 2
+    prereqs: [转录]
+    exam_freq: 5
+  - name: 基因突变
+    chapter: 变异与育种
+    difficulty: 2
+    prereqs: [DNA复制]
+    exam_freq: 4
+  - name: 染色体变异
+    chapter: 变异与育种
+    difficulty: 2
+    prereqs: [减数分裂]
+    exam_freq: 3
+  - name: 基因重组
+    chapter: 变异与育种
+    difficulty: 2
+    prereqs: [减数分裂]
+    exam_freq: 4
+  - name: 内环境与稳态
+    chapter: 稳态与调节
+    difficulty: 2
+    prereqs: []
+    exam_freq: 4
+  - name: 神经调节基础
+    chapter: 稳态与调节
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 体液调节与激素
+    chapter: 稳态与调节
+    difficulty: 2
+    prereqs: []
+    exam_freq: 5
+  - name: 免疫调节
+    chapter: 稳态与调节
+    difficulty: 2
+    prereqs: [内环境与稳态]
+    exam_freq: 4
+  - name: 种群的特征
+    chapter: 生态学
+    difficulty: 1
+    prereqs: []
+    exam_freq: 3
+  - name: 群落的结构与演替
+    chapter: 生态学
+    difficulty: 2
+    prereqs: [种群的特征]
+    exam_freq: 4
+  - name: 生态系统的结构
+    chapter: 生态学
+    difficulty: 2
+    prereqs: [群落的结构与演替]
+    exam_freq: 5
+  - name: 生态系统的功能
+    chapter: 生态学
+    difficulty: 2
+    prereqs: [生态系统的结构]
+    exam_freq: 4
