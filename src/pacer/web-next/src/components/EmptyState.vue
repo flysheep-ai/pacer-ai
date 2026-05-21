@@ -17,12 +17,12 @@ const greeting = computed(() => {
 })
 const name = computed(() => auth.profile?.name ?? t('chat.classmate'))
 
-const suggestions = [
+const suggestions = computed(() => [
   t('greeting.suggestion1'),
   t('greeting.suggestion2'),
   t('greeting.suggestion3'),
   t('greeting.suggestion4'),
-]
+])
 </script>
 
 <template>
