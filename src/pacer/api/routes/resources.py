@@ -117,6 +117,7 @@ def get_mastery(db: Session = Depends(get_db), student_id: int = Depends(current
         kp = db.query(KnowledgePoint).filter_by(id=m.knowledge_point_id).first()
         subject = kp.subject if kp else "未知"
         result.setdefault(subject, []).append({
+            "knowledge_point_id": m.knowledge_point_id,
             "point_name": kp.point_name if kp else "?",
             "mastery_score": m.mastery_score,
             "correct_count": m.correct_count,
@@ -148,6 +149,46 @@ async def start_error_review(
     store.append_message(
         chat.id, role="user", agent=None, content=seed_text,
         metadata={"error_review_id": e.id},
+    )
+    assistant_msg = store.create_empty_assistant(chat.id, agent="subject_teacher")
+
+    start_assistant_stream(
+        app_state=request.app.state,
+        student_id=student_id,
+        session_id=chat.id,
+        assistant_message_id=assistant_msg.id,
+        user_message_for_llm=seed_text,
+        user_text_for_memory=seed_text,
+        history=[],
+    )
+    return {"session_id": chat.id, "assistant_message_id": assistant_msg.id}
+
+
+class MasteryStartReviewRequest(BaseModel):
+    knowledge_point_id: int
+
+
+@router.post("/mastery/start-review", status_code=202)
+async def start_mastery_review(
+    req: MasteryStartReviewRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    student_id: int = Depends(current_student_id),
+):
+    kp = db.get(KnowledgePoint, req.knowledge_point_id)
+    if kp is None:
+        raise HTTPException(status_code=404, detail="knowledge point not found")
+
+    seed_text = (
+        f"[复习知识点 #{kp.id}] {kp.subject} · {kp.point_name}\n"
+        f"请帮我讲解这个知识点，并出几道练习题。"
+    )
+
+    store = SessionStore(db)
+    chat = store.create_session(student_id=student_id)
+    store.append_message(
+        chat.id, role="user", agent=None, content=seed_text,
+        metadata={"knowledge_point_id": kp.id},
     )
     assistant_msg = store.create_empty_assistant(chat.id, agent="subject_teacher")
 

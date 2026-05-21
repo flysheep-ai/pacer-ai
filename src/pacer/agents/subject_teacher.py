@@ -45,7 +45,7 @@ def build_subject_teacher_agent(
     reg.register(LoadSkillTool(loader=skills_loader))
     reg.register(ListSkillsTool(loader=skills_loader))
     reg.register(VisionUnderstandImageTool(llm=llm, model=vision_model))
-    reg.register(SaveErrorRecordTool(session_factory, student_id))
+    reg.register(SaveErrorRecordTool(session_factory, student_id, llm=llm))
     reg.register(GenerateVariantTool(llm=llm))
     reg.register(MarkErrorReviewedTool(session_factory, student_id))
     reg.register(UpdateStudentMasteryTool(session_factory, student_id))
