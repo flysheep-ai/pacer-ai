@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { FluidBackground } from '@/utils/fluid-background'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const toast = useToast()
 const router = useRouter()
@@ -27,7 +29,7 @@ async function onSubmit(): Promise<void> {
   const sidNum = Number(sid.value.trim())
   const pinTrim = pin.value.trim()
   if (!sidNum || !pinTrim) {
-    toast.push({ type: 'error', text: '请填写学号和密码' })
+    toast.push({ type: 'error', text: t('login.fillRequired') })
     return
   }
   busy.value = true
@@ -36,7 +38,7 @@ async function onSubmit(): Promise<void> {
     await auth.loadProfile()
     await router.push('/chat')
   } catch {
-    toast.push({ type: 'error', text: '学号或密码不对' })
+    toast.push({ type: 'error', text: t('login.wrongCredentials') })
   } finally {
     busy.value = false
   }
@@ -51,17 +53,17 @@ async function onSubmit(): Promise<void> {
         <span class="login-brand-seal" aria-hidden="true" />
         <span class="login-brand-text">pacer</span>
       </div>
-      <p class="login-sub">高考陪跑AI</p>
+      <p class="login-sub">{{ t('login.subtitle') }}</p>
       <label class="login-field">
-        <span>学号</span>
+        <span>{{ t('login.studentId') }}</span>
         <input v-model="sid" type="text" inputmode="numeric" autofocus />
       </label>
       <label class="login-field">
-        <span>密码</span>
+        <span>{{ t('login.pin') }}</span>
         <input v-model="pin" type="password" />
       </label>
       <button type="submit" class="login-btn" :disabled="busy">
-        {{ busy ? '正在进入…' : '进入 pacer' }}
+        {{ busy ? t('login.entering') : t('login.enter') }}
       </button>
     </form>
   </div>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 defineProps<{ content: string; imageBase64?: string }>()
 </script>
 
 <template>
   <div class="row">
     <div class="bubble">
-      <img v-if="imageBase64" :src="'data:image/jpeg;base64,' + imageBase64" class="img" alt="上传的图片" />
+      <img v-if="imageBase64" :src="'data:image/jpeg;base64,' + imageBase64" class="img" :alt="t('chat.uploadedImage')" />
       <span v-if="content">{{ content }}</span>
     </div>
   </div>

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiFetch } from '@/api/client'
+import { i18n } from '@/i18n'
 import { useSessionStore } from './session'
 
 export interface ChatMessage {
@@ -74,7 +75,7 @@ export const useChatStore = defineStore('chat', {
         this._streamingMid = r.assistant_message_id
         return r.assistant_message_id
       } catch {
-        this.messages.push({ role: 'assistant', content: '出错了，请稍后重试。' })
+        this.messages.push({ role: 'assistant', content: i18n.global.t('chat.errorRetry') })
         this.isAwaiting = false
         return null
       }

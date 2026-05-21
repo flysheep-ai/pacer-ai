@@ -1,19 +1,21 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useChatStore } from '@/stores/chat'
 import SidebarSessionItem from './SidebarSessionItem.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const session = useSessionStore()
 const chat = useChatStore()
 const router = useRouter()
 
-const presets = [
-  '帮我制定今天的学习计划',
-  '帮我复盘最近的错题',
-  '生成今天的学习日报',
+const presets: { text: string; label: string }[] = [
+  { text: '帮我制定今天的学习计划', label: t('nav.todayPlan') },
+  { text: '帮我复盘最近的错题', label: t('nav.errorReview') },
+  { text: '生成今天的学习日报', label: t('nav.dailyReport') },
 ]
 
 function newChat(): void {
@@ -29,8 +31,8 @@ async function logout(): Promise<void> {
   await router.push('/')
 }
 
-function preset(text: string): void {
-  void chat.send(text)
+function preset(p: { text: string }): void {
+  void chat.send(p.text)
 }
 
 function selectChat(sid: number): void {
@@ -51,31 +53,29 @@ async function deleteChat(sid: number): Promise<void> {
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-seal" aria-hidden="true" />
-      <span class="brand-text">pacer</span>
+      <span class="brand-text">{{ t('nav.brand') }}</span>
     </div>
 
-    <button class="row primary" type="button" @click="newChat">新对话</button>
+    <button class="row primary" type="button" @click="newChat">{{ t('nav.newChat') }}</button>
 
-    <div class="section">快捷入口</div>
+    <div class="section">{{ t('nav.shortcuts') }}</div>
     <button
       v-for="p in presets"
-      :key="p"
+      :key="p.text"
       class="row"
       type="button"
       @click="preset(p)"
     >
-      {{ p === '帮我制定今天的学习计划' ? '今日计划'
-        : p === '帮我复盘最近的错题'   ? '错题复盘'
-        : '学习日报' }}
+      {{ p.label }}
     </button>
 
-    <div class="section">页面</div>
-    <button class="row" type="button" @click="router.push('/me')">个人中心</button>
-    <button class="row" type="button" @click="router.push('/errors')">错题本</button>
-    <button class="row" type="button" @click="router.push('/plan')">学习计划</button>
-    <button class="row" type="button" @click="router.push('/mastery')">学习掌握度</button>
+    <div class="section">{{ t('nav.pages') }}</div>
+    <button class="row" type="button" @click="router.push('/me')">{{ t('nav.profile') }}</button>
+    <button class="row" type="button" @click="router.push('/errors')">{{ t('nav.errors') }}</button>
+    <button class="row" type="button" @click="router.push('/plan')">{{ t('nav.plan') }}</button>
+    <button class="row" type="button" @click="router.push('/mastery')">{{ t('nav.mastery') }}</button>
 
-    <div class="section">历史会话</div>
+    <div class="section">{{ t('nav.history') }}</div>
     <div v-if="session.loading" class="hint">…</div>
     <div class="session-scroll">
       <SidebarSessionItem
@@ -88,7 +88,7 @@ async function deleteChat(sid: number): Promise<void> {
     </div>
 
     <div class="footer">
-      <button class="footer-row" type="button" @click="logout">退出</button>
+      <button class="footer-row" type="button" @click="logout">{{ t('nav.logout') }}</button>
     </div>
   </aside>
 </template>

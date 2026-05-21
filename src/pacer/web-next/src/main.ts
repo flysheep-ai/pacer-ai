@@ -5,6 +5,7 @@ import './styles/tokens.css'
 import './styles/base.css'
 import App from './App.vue'
 import { createRouter } from './router'
+import { i18n } from './i18n'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
 import { startSSE } from './api/sse'
@@ -12,6 +13,7 @@ import { startSSE } from './api/sse'
 const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
+app.use(i18n)
 app.use(createRouter())
 
 const auth = useAuthStore(pinia)

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/chat'
 import { useToast } from '@/composables/useToast'
 import IconButton from './IconButton.vue'
 
+const { t } = useI18n()
 const chat = useChatStore()
 const toast = useToast()
 const text = ref('')
@@ -25,9 +27,9 @@ function autoResize(): void {
 
 async function onSend(): Promise<void> {
   if (!canSend.value) return
-  const t = text.value.trim()
-  if (t.length > MAX_TEXT) {
-    toast.push({ type: 'error', text: '消息过长' })
+  const msg = text.value.trim()
+  if (msg.length > MAX_TEXT) {
+    toast.push({ type: 'error', text: t('chat.messageTooLong') })
     return
   }
   const img = attachedImage.value
@@ -36,7 +38,7 @@ async function onSend(): Promise<void> {
   attachedImageName.value = ''
   await nextTick()
   autoResize()
-  await chat.send(t, img ?? undefined)
+  await chat.send(msg, img ?? undefined)
 }
 
 async function onStop(): Promise<void> {
@@ -60,12 +62,12 @@ async function onFile(e: Event): Promise<void> {
   const file = input.files?.[0]
   if (!file) return
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    toast.push({ type: 'error', text: '只支持 jpg / png / webp' })
+    toast.push({ type: 'error', text: t('chat.unsupportedImage') })
     input.value = ''
     return
   }
   if (file.size > 8 * 1024 * 1024) {
-    toast.push({ type: 'error', text: '图片不能超过 8MB' })
+    toast.push({ type: 'error', text: t('chat.imageTooLarge') })
     input.value = ''
     return
   }
@@ -87,8 +89,8 @@ async function onFile(e: Event): Promise<void> {
   <div class="wrap">
     <div class="composer">
       <IconButton
-        aria-label="上传题目图片"
-        :title="uploading ? '正在上传…' : '上传题目图片'"
+        :aria-label="t('chat.uploadImage')"
+        :title="uploading ? t('chat.uploading') : t('chat.uploadImage')"
         @click="fileInput?.click()"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -98,8 +100,8 @@ async function onFile(e: Event): Promise<void> {
         </svg>
       </IconButton>
       <div v-if="attachedImage" class="image-preview">
-        <img :src="'data:image/jpeg;base64,' + attachedImage" alt="预览" />
-        <button type="button" class="remove-img" @click="removeImage" title="移除图片">
+        <img :src="'data:image/jpeg;base64,' + attachedImage" :alt="t('chat.preview')" />
+        <button type="button" class="remove-img" @click="removeImage" :title="t('chat.removeImage')">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
@@ -110,7 +112,7 @@ async function onFile(e: Event): Promise<void> {
         v-model="text"
         class="input"
         rows="1"
-        :placeholder="attachedImage ? '描述这张图片…' : '输入消息，或拍照上传题目…'"
+        :placeholder="attachedImage ? t('chat.describeImage') : t('chat.placeholder')"
         @keydown="onKeydown"
         @input="autoResize"
       />
@@ -126,7 +128,7 @@ async function onFile(e: Event): Promise<void> {
         type="button"
         class="stop-btn"
         @click="onStop"
-        title="停止输出"
+        :title="t('chat.stopOutput')"
       >
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
           <rect x="6" y="6" width="12" height="12" rx="1"/>

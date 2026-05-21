@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { apiFetch } from '@/api/client'
 import AppShell from '@/components/AppShell.vue'
+
+const { t } = useI18n()
 
 type ErrorRow = {
   id: number
@@ -42,13 +45,13 @@ async function startReview(e: ErrorRow): Promise<void> {
 <template>
   <AppShell>
     <div class="page">
-      <h1>错题本</h1>
-      <p v-if="loading" class="hint">翻阅中…</p>
-      <p v-else-if="errors.length === 0" class="empty">暂未记下错题</p>
+      <h1>{{ t('errors.title') }}</h1>
+      <p v-if="loading" class="hint">{{ t('errors.loading') }}</p>
+      <p v-else-if="errors.length === 0" class="empty">{{ t('errors.empty') }}</p>
       <div v-for="e in errors" :key="e.id" class="card">
         <div class="meta">{{ e.error_type }} · {{ e.source }}</div>
-        <div class="answer">你的答案: {{ e.user_answer || '——' }}</div>
-        <div class="answer">正确答案: {{ e.correct_answer || '——' }}</div>
+        <div class="answer">{{ t('errors.yourAnswer') }}: {{ e.user_answer || '——' }}</div>
+        <div class="answer">{{ t('errors.correctAnswer') }}: {{ e.correct_answer || '——' }}</div>
         <div v-if="e.explanation_text" class="explain">{{ e.explanation_text }}</div>
         <div class="actions">
           <button
@@ -56,7 +59,7 @@ async function startReview(e: ErrorRow): Promise<void> {
             :disabled="reviewing === e.id"
             @click="startReview(e)"
           >
-            {{ reviewing === e.id ? '正在准备…' : '开始复盘' }}
+            {{ reviewing === e.id ? t('errors.preparing') : t('errors.startReview') }}
           </button>
         </div>
       </div>

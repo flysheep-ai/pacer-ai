@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { apiFetch } from '@/api/client'
 import AppShell from '@/components/AppShell.vue'
+
+const { t, tm } = useI18n()
 
 type KP = {
   knowledge_point_id: number
@@ -13,16 +16,15 @@ type KP = {
 }
 type MasteryData = Record<string, KP[]>
 
-const SUBJECT_LABELS: Record<string, string> = {
-  math: '数学', chinese: '语文', english: '英语',
-  physics: '物理', chemistry: '化学', biology: '生物',
-}
-
 const data = ref<MasteryData | null>(null)
 const loading = ref(true)
 const expanded = ref<string | null>(null)
 const reviewing = ref<number | null>(null)
 const router = useRouter()
+
+function subjectLabel(key: string): string {
+  return (tm('mastery.subjects') as Record<string, string>)[key] ?? key
+}
 
 onMounted(async () => {
   try { data.value = await apiFetch<MasteryData>('/mastery') }
@@ -38,7 +40,7 @@ const subjects = computed(() => {
       : kps.reduce((s, kp) => s + kp.mastery_score, 0) / total
     return {
       subject,
-      label: SUBJECT_LABELS[subject] ?? subject,
+      label: subjectLabel(subject),
       kps,
       avg: Math.round(avg * 100),
       total,
@@ -82,10 +84,10 @@ async function startReview(kp: KP & { subject: string }): Promise<void> {
 <template>
   <AppShell>
     <div class="page">
-      <h1>学习掌握度</h1>
-      <p v-if="loading" class="hint">翻阅中…</p>
+      <h1>{{ t('mastery.title') }}</h1>
+      <p v-if="loading" class="hint">{{ t('mastery.loading') }}</p>
       <p v-else-if="subjects.length === 0" class="empty">
-        还没有答题记录——去聊天里找老师练几道题吧
+        {{ t('mastery.empty') }}
       </p>
       <template v-else>
         <div class="subject-grid">
@@ -102,12 +104,12 @@ async function startReview(kp: KP & { subject: string }): Promise<void> {
         </div>
 
         <div v-if="top5Weak.length > 0" class="section">
-          <h2>最弱 5 项</h2>
+          <h2>{{ t('mastery.weakest') }}</h2>
           <div
             v-for="kp in top5Weak" :key="kp.subject + kp.point_name"
             class="weak-row"
           >
-            <span class="weak-label">{{ kp.point_name }} · {{ SUBJECT_LABELS[kp.subject] ?? kp.subject }}</span>
+            <span class="weak-label">{{ kp.point_name }} · {{ subjectLabel(kp.subject) }}</span>
             <div class="weak-bar"><div class="weak-fill" :style="{ width: Math.round(kp.mastery_score * 100) + '%' }" /></div>
             <span class="weak-pct">{{ Math.round(kp.mastery_score * 100) }}%</span>
             <button
@@ -121,7 +123,7 @@ async function startReview(kp: KP & { subject: string }): Promise<void> {
         </div>
 
         <div v-if="expanded" class="section">
-          <h2>{{ SUBJECT_LABELS[expanded] ?? expanded }} 详情</h2>
+          <h2>{{ subjectLabel(expanded) }} {{ t('mastery.details') }}</h2>
           <div
             v-for="kp in data?.[expanded] ?? []"
             :key="kp.point_name"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import MarkdownRender from './MarkdownRender.vue'
 
+const { t } = useI18n()
 const props = defineProps<{
   content: string
   agent?: string
@@ -9,14 +11,14 @@ const props = defineProps<{
 }>()
 
 function agentLabel(agent: string | undefined): string {
-  if (agent === 'subject_teacher') return '学科老师'
-  if (agent === 'mood_companion') return '心态陪伴'
+  if (agent === 'subject_teacher') return t('chat.subjectTeacher')
+  if (agent === 'mood_companion') return t('chat.moodCompanion')
   return ''
 }
 
 function badgeText(): string {
-  if (props.streaming) return '正在回答…'
-  if (props.stopReason === 'user_stopped') return '已停止'
+  if (props.streaming) return t('chat.streaming')
+  if (props.stopReason === 'user_stopped') return t('chat.stopped')
   return agentLabel(props.agent)
 }
 </script>

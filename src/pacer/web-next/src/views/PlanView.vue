@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiFetch } from '@/api/client'
 import AppShell from '@/components/AppShell.vue'
+
+const { t } = useI18n()
 
 type Task = {
   id?: string
@@ -52,24 +55,24 @@ async function toggleTask(plan: Plan, task: Task): Promise<void> {
   }
 }
 
-function describe(t: Task): string {
+function describe(task: Task): string {
   const parts: string[] = []
-  if (t.subject) parts.push(t.subject)
-  if (t.duration_min) parts.push(`${t.duration_min} 分钟`)
-  if (t.note) parts.push(t.note)
-  return parts.join(' · ') || '任务'
+  if (task.subject) parts.push(task.subject)
+  if (task.duration_min) parts.push(`${task.duration_min} ${t('plan.minutes')}`)
+  if (task.note) parts.push(task.note)
+  return parts.join(' · ') || t('plan.task')
 }
 </script>
 
 <template>
   <AppShell>
     <div class="page">
-      <h1>学习计划</h1>
-      <p v-if="loading" class="hint">翻阅中…</p>
-      <p v-else-if="plans.length === 0" class="empty">今天还没有计划</p>
+      <h1>{{ t('plan.title') }}</h1>
+      <p v-if="loading" class="hint">{{ t('plan.loading') }}</p>
+      <p v-else-if="plans.length === 0" class="empty">{{ t('plan.empty') }}</p>
       <div v-for="p in plans" :key="p.id" class="card">
         <div class="head">
-          <div class="type">{{ p.type === 'daily' ? '日计划' : '周计划' }}</div>
+          <div class="type">{{ p.type === 'daily' ? t('plan.daily') : t('plan.weekly') }}</div>
           <div class="progress">{{ progress(p).done }}/{{ progress(p).total }}</div>
         </div>
         <div class="bar"><div class="fill" :style="{ width: progress(p).pct + '%' }"></div></div>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { apiFetch } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import AppShell from '@/components/AppShell.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const toast = useToast()
 const form = ref({ name: '', school: '', target_school: '', stream: '' })
@@ -21,20 +23,20 @@ async function save(): Promise<void> {
   try {
     await apiFetch('/profile/', { method: 'PATCH', json: form.value })
     await auth.loadProfile()
-    toast.push({ type: 'info', text: '已保存' })
-  } catch { toast.push({ type: 'error', text: '保存失败' }) }
+    toast.push({ type: 'info', text: t('profile.saved') })
+  } catch { toast.push({ type: 'error', text: t('profile.saveFailed') }) }
   finally { saving.value = false }
 }
 </script>
 <template>
   <AppShell>
     <div class="page">
-      <h1>个人中心</h1>
-      <label class="field"><span>姓名</span><input v-model="form.name" /></label>
-      <label class="field"><span>学校</span><input v-model="form.school" /></label>
-      <label class="field"><span>目标学校</span><input v-model="form.target_school" /></label>
-      <label class="field"><span>分科</span><input v-model="form.stream" /></label>
-      <button class="btn" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+      <h1>{{ t('profile.title') }}</h1>
+      <label class="field"><span>{{ t('profile.name') }}</span><input v-model="form.name" /></label>
+      <label class="field"><span>{{ t('profile.school') }}</span><input v-model="form.school" /></label>
+      <label class="field"><span>{{ t('profile.targetSchool') }}</span><input v-model="form.target_school" /></label>
+      <label class="field"><span>{{ t('profile.stream') }}</span><input v-model="form.stream" /></label>
+      <button class="btn" :disabled="saving" @click="save">{{ saving ? t('profile.saving') : t('profile.save') }}</button>
     </div>
   </AppShell>
 </template>

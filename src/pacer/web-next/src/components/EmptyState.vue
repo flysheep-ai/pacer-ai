@@ -1,32 +1,34 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import SuggestionChip from './SuggestionChip.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const emit = defineEmits<{ preset: [text: string] }>()
 
 const greeting = computed(() => {
   const h = new Date().getHours()
-  if (h < 6) return '夜深了'
-  if (h < 12) return '早上好'
-  if (h < 18) return '下午好'
-  return '晚上好'
+  if (h < 6) return t('greeting.night')
+  if (h < 12) return t('greeting.morning')
+  if (h < 18) return t('greeting.afternoon')
+  return t('greeting.evening')
 })
-const name = computed(() => auth.profile?.name ?? '同学')
+const name = computed(() => auth.profile?.name ?? t('chat.classmate'))
 
 const suggestions = [
-  '帮我讲一道导数题',
-  '帮我制定今天的学习计划',
-  '帮我分析一下这道错题',
-  '最近有点焦虑，想聊聊',
+  t('greeting.suggestion1'),
+  t('greeting.suggestion2'),
+  t('greeting.suggestion3'),
+  t('greeting.suggestion4'),
 ]
 </script>
 
 <template>
   <div class="empty">
     <h1>{{ greeting }}，{{ name }}</h1>
-    <p>我是你的 AI 班主任。试试下面这些，或者直接问我任何问题。</p>
+    <p>{{ t('greeting.intro') }}</p>
     <div class="chips">
       <SuggestionChip
         v-for="s in suggestions"

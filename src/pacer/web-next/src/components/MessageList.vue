@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChatStore } from '@/stores/chat'
 import { useAutoScroll } from '@/composables/useAutoScroll'
 import UserMessage from './UserMessage.vue'
 import AssistantMessage from './AssistantMessage.vue'
 import EmptyState from './EmptyState.vue'
 
+const { t } = useI18n()
 const emit = defineEmits<{ preset: [text: string] }>()
 const chat = useChatStore()
 const scrollEl = ref<HTMLElement | null>(null)
@@ -23,7 +25,7 @@ useAutoScroll(scrollEl, tick)
           <UserMessage v-if="m.role === 'user'" :content="m.content" :image-base64="m.imageBase64" />
           <AssistantMessage v-else :content="m.content" :agent="m.agent" :streaming="m.streaming" :stop-reason="m.stopReason" />
         </template>
-        <div v-if="chat.isAwaiting" class="typing" aria-label="正在输入">
+        <div v-if="chat.isAwaiting" class="typing" :aria-label="t('chat.typing')">
           <span /><span /><span />
         </div>
       </template>

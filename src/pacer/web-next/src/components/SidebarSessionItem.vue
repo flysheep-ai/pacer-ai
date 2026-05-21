@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 defineProps<{ session: { id: number; title: string; message_count: number } }>()
 const emit = defineEmits<{ click: []; delete: [] }>()
 
@@ -11,7 +13,7 @@ function onDelete(e: Event): void {
   <button type="button" class="item" @click="emit('click')">
     <span class="title">{{ session.title }}</span>
     <span class="count">{{ session.message_count }}</span>
-    <button type="button" class="del" @click="onDelete" title="删除对话">×</button>
+    <button type="button" class="del" @click="onDelete" :title="t('nav.deleteChat')">×</button>
   </button>
 </template>
 <style scoped>
