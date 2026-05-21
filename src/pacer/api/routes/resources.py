@@ -1,6 +1,8 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
+from pydantic import BaseModel
 from pacer.api.deps import get_db, current_student_id
 from pacer.db.models import ErrorRecord, Plan, StudentMastery, KnowledgePoint
 
@@ -73,6 +75,36 @@ def get_plan(pid: int, db: Session = Depends(get_db), student_id: int = Depends(
     if not p:
         raise HTTPException(status_code=404, detail="not found")
     return {"id": p.id, "type": p.type, "tasks": p.tasks_json, "feedback": p.feedback}
+
+
+class TaskUpdateRequest(BaseModel):
+    done: bool
+
+
+@router.patch("/plans/{plan_id}/tasks/{task_id}", status_code=204)
+def patch_plan_task(
+    plan_id: int,
+    task_id: str,
+    req: TaskUpdateRequest,
+    db: Session = Depends(get_db),
+    student_id: int = Depends(current_student_id),
+):
+    p = db.query(Plan).filter_by(id=plan_id, student_id=student_id).first()
+    if p is None:
+        raise HTTPException(status_code=404, detail="plan not found")
+    tasks = list(p.tasks_json or [])
+    found = False
+    for t in tasks:
+        if isinstance(t, dict) and t.get("id") == task_id:
+            t["done"] = req.done
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="task not found")
+    p.tasks_json = tasks
+    flag_modified(p, "tasks_json")
+    db.commit()
+    return None
 
 
 @router.get("/mastery")
