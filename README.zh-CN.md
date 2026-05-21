@@ -4,70 +4,117 @@
 
 **简体中文** · [English](README.md)
 
-![pacer-ai 概览](pic/readme.png)
+<p align="center">
+  <img src="pic/readme.png" alt="pacer-ai 概览" width="720">
+</p>
 
-面向中国高三学生的多 Agent AI 陪伴系统。不是替你跑，而是陪你跑完高考这一程——学业陪伴、计划督促、心态支持，贯穿全年备考。
+面向高三学生的多 Agent AI 陪伴系统。三个角色（班主任 / 学科老师 / 心态陪伴）共享同一个对话，背后是跨月积累的长期学生记忆。不是替你跑——是陪你跑完高考这一程。
 
-## 为什么
+---
 
-现有的 AI 学习工具分两类：
-- **错题工具**（拍题搜答）—— 有用但缺乏延续性
-- **单科辅导**（针对数学/英语等）—— 深入但孤立，看不到完整的学生
+## 功能亮点
 
-高三学生需要的是一个**真正"懂他"**的角色：薄弱点、目标院校、压力规律、进步轨迹。`pacer-ai` 围绕"跨月份累积的学生画像"做设计，而不是单次问答。
+- **多 Agent 对话** — 一个聊天窗口，三个 AI 角色。Haiku 路由模型按意图自动切换，学生感知到的是"一个一直在的陪伴者"。
+- **拍照答疑** — 拍一道数学题，自动 OCR → 识别学科 → 分步讲解。
+- **错题本** — 每道错题自动记录。点击「开始复盘」进入对话，学科老师重讲 → 出变式题 → 批改 → 更新掌握度。
+- **掌握度追踪** — 6 大学科、207 个知识点的得分可视化。最弱 5 项高亮，一键跳转复习。
+- **计划勾选** — 每早生成的计划可逐条勾选完成，日报读的是真实完成率。
+- **一日陪伴闭环** — 07:00 早安计划 → 随时答疑 → 18:00 错题复盘 → 21:30 日报 → 22:30 晚安。
+- **红线兜底** — 关键词扫描 + LLM 二次确认，触发自伤信号时直接短路返回危机热线，主对话模型不会被调用。
+- **长期记忆** — 384 维向量嵌入（all-MiniLM-L6-v2），余弦去重，自动从对话中提取值得记住的事实。
 
-## 核心架构
+---
 
-**3 个 Agent 协作**：
-- 🎓 **班主任** —— 永远在场。意图路由 / 计划生成 / 串场 / 在自然对话中渐进补全学生画像。
-- 📚 **学科老师** —— 1 个 agent + 6 科 skill 库。按对话动态加载学科知识（语文 / 数学 / 英语 / 物理 / 化学 / 生物），讲完移交回班主任。
-- 💗 **心态陪伴** —— 不评判式倾听，含红线检测（识别自伤等极端表述并兜底）。
+## 快速开始
 
-**一日陪伴闭环**：
+```bash
+# 1. 克隆并安装
+git clone git@github.com:flysheep-ai/pacer-ai.git
+cd pacer-ai
+pip install -e '.[dev]'
+
+# 2. 配置环境
+cp .env.example .env
+# 编辑 .env — 填入 LLM_API_KEY 和 PACER_INTERNAL_TOKEN
+
+# 3. 数据库迁移 + 种子数据
+alembic upgrade head
+python scripts/seed_dev_student.py
+python scripts/seed_knowledge_points.py
+
+# 4. 启动后端（终端 1）
+uvicorn pacer.api.server:create_app --factory --reload --port 8001
+
+# 5. 启动调度器（终端 2）
+python -m pacer.scheduler.runner
+
+# 6. 启动前端（终端 3）
+cd src/pacer/web-next && pnpm install && pnpm dev
+
+# 浏览器打开 http://localhost:5173 — 学号 1，PIN 123456 登录
 ```
-07:00 🌅 早安 + 今日计划
-  ↓
-随时 💬 答疑 / 讲题（拍照或文字）
-  ↓
-18:00 📝 错题复盘 + 变式训练
-  ↓
-21:30 📊 学习日报 + 情绪 check-in
-```
 
-班主任始终在场，学科老师/心态师被召唤后接管并交回——用户感知是"始终在跟一个 AI 对话"，不需要切换页面。
+---
 
 ## 技术栈
 
 | 层 | 选型 |
 |----|------|
-| 语言 | Python 3.11+ |
-| Web 框架 | FastAPI（HTTP + SSE 流式） |
-| ORM / DB | SQLAlchemy + SQLite（MVP） → Postgres |
+| 后端 | Python 3.11+ · FastAPI · SQLAlchemy · Alembic |
+| 前端 | Vue 3 · Vite · Pinia · TypeScript |
+| 主模型 | Claude Sonnet 4.6 |
+| 路由模型 | Claude Haiku 4.5 |
+| 嵌入模型 | all-MiniLM-L6-v2（384 维，numpy） |
+| 数据库 | SQLite（开发） → Postgres（生产） |
 | 调度 | APScheduler（独立进程） |
-| LLM（可配） | Claude Sonnet 4.6（主对话） + Haiku 4.5（路由） |
-| 视觉（替代 OCR） | 商用多模态 LLM API |
-| 前端 | 平板 Web 页面（用户自有硬件） |
+| 鉴权 | bcrypt PIN + DB 持久化 Token（带 TTL） |
 
-## 设计文档
+---
 
-完整设计见 [`docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md`](docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md) —— 12 节覆盖架构、Agent 角色、数据模型、场景流、错误处理、测试策略 + 24 条已锁定设计决策。
+## 架构
 
-## 路线图
+```
+POST /message/send
+  ├─ 红线扫描 → 触发？→ 直接返回危机资源（不调 LLM）
+  ├─ 创建 streaming 占位消息 → 202 应答
+  └─ 后台任务（独立 DB session）
+       ├─ RouterLLM (Haiku): 意图 → 选择 Agent
+       ├─ AgentLoop.run_streaming（工具 ↔ LLM）
+       │    ├─ 班主任: 计划、画像、错题、记忆
+       │    ├─ 学科老师: 技能库、视觉、变式题
+       │    └─ 心态陪伴: 记录情绪、交回班主任
+       ├─ SSE 增量 → EventBus → GET /events/stream
+       ├─ LLMUsage 用量入库
+       └─ 记忆提取器（每 N 轮触发一次）
+```
 
-5 周 MVP，4 阶段：
+测试：`tests/{unit,integration,api,e2e}/` · `pytest`（81 条）· `pnpm test`（vitest，66 条）
 
-| 阶段 | 时长 | 目标 |
-|------|------|------|
-| 1 · 骨架 | 约 1 周 | Fork + 砍金融 + DB schema + 单 Agent + FastAPI/SSE |
-| 2 · 3 Agent 编排 | 约 1.5 周 | 路由 LLM + 三套 prompt + 完整答疑流 |
-| 3 · 主动陪伴 + 错题闭环 | 约 1.5 周 | Scheduler + 4 个定时场景 + 视觉输入 + 掌握度 |
-| 4 · 心态陪伴 + 打磨 | 约 1 周 | 心态师 + 红线 + 6 科 skill + E2E 测试 |
+---
 
-V1.1+ 候选：周报 / 家长端 / 语义检索 / 题库扩充 / 离线模式。
+## 开发
 
-## 状态
+```bash
+# 后端
+pytest                              # 全部测试
+pytest tests/unit/test_memory.py    # 单个文件
+alembic revision --autogenerate -m "描述"
 
-🚧 设计阶段完成，实施计划生成中。
+# 前端
+cd src/pacer/web-next
+pnpm dev          # 开发服务器（端口 5173）
+pnpm build        # 生产构建
+pnpm test         # vitest
+pnpm typecheck    # vue-tsc --noEmit
+
+# 种子数据
+python scripts/seed_dev_student.py        # 学生 id=1, pin=123456
+python scripts/seed_knowledge_points.py   # ~200 条高考知识点
+```
+
+完整设计文档：[`docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md`](docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md)
+
+---
 
 ## 许可证
 

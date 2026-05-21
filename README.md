@@ -4,70 +4,116 @@
 
 [简体中文](README.zh-CN.md) · **English**
 
-![pacer-ai overview](pic/readme.png)
+<p align="center">
+  <img src="pic/readme.png" alt="pacer-ai overview" width="720">
+</p>
 
-A multi-agent AI companion for Chinese high-school seniors prepping for the **Gaokao** — China's nationwide college-entrance exam (think SAT, except it runs two days, you take it once, and your score is by far the biggest factor in which university you end up at). Not a replacement runner — a pacer that runs alongside, covering academics, planning, and emotional support throughout the year-long sprint.
+A multi-agent AI companion for Chinese high-school seniors prepping for the **Gaokao** — China's nationwide college-entrance exam (think SAT, except two days, one shot). Three agents — homeroom teacher, subject teacher, and mood companion — share one conversation, backed by persistent per-student memory built up over months.
 
-## Why
+---
 
-Existing AI study tools fall into two camps:
-- **Photo-and-search apps** — handy for one-off questions, but transactional, no continuity
-- **Single-subject tutors** — deep but narrow, no whole-person view
+## Features
 
-Seniors need something that *knows them*: their weak spots, their goals, their stress patterns, their progress. `pacer-ai` is designed around persistent student understanding accumulated across months of daily interaction.
+- **Multi-agent chat** — one conversation, three AI roles. A router (Haiku) picks the right agent per turn; the student perceives one continuous companion.
+- **Photo Q&A** — snap a math problem, get OCR + subject routing + step-by-step explanation.
+- **Error book** — every mistake is recorded. Click "开始复盘" to re-enter a chat where the subject teacher re-explains, generates a variant, and grades your attempt.
+- **Mastery tracking** — per-knowledge-point scores across all 6 Gaokao subjects, with weak-spot highlights and one-click review chats.
+- **Plan check-off** — morning plan with checkboxes; real completion rates feed the evening report.
+- **Daily companion loop** — 07:00 briefing → anytime Q&A → 18:00 error review → 21:30 daily report → 22:30 goodnight.
+- **Mood safety net** — keyword scanner + LLM triage short-circuits to crisis hotlines before the main agent ever sees the text.
+- **Long-term memory** — 384-dim vector embeddings (all-MiniLM-L6-v2), cosine de-duplication, automatic fact extraction from conversations.
 
-## Core Architecture
+---
 
-**Three collaborating agents**:
-- 🎓 **Homeroom Teacher** — Always present. Routes intent, generates daily plans, manages cadence, fills gaps in the student profile through natural conversation.
-- 📚 **Subject Teacher** — One agent, six skill libraries. Loads the right subject pack (Math / Chinese-language / English / Physics / Chemistry / Biology) on demand, then hands back to homeroom.
-- 💗 **Mood Companion** — Non-judgmental listening for stress moments. Includes a red-line layer that flags self-harm signals.
+## Quick Start
 
-**Daily companion loop**:
+```bash
+# 1. Clone and install
+git clone git@github.com:flysheep-ai/pacer-ai.git
+cd pacer-ai
+pip install -e '.[dev]'
+
+# 2. Set up environment
+cp .env.example .env
+# Edit .env — fill LLM_API_KEY and PACER_INTERNAL_TOKEN
+
+# 3. Migrate + seed
+alembic upgrade head
+python scripts/seed_dev_student.py
+python scripts/seed_knowledge_points.py
+
+# 4. Start backend (terminal 1)
+uvicorn pacer.api.server:create_app --factory --reload --port 8001
+
+# 5. Start scheduler (terminal 2)
+python -m pacer.scheduler.runner
+
+# 6. Start frontend (terminal 3)
+cd src/pacer/web-next && pnpm install && pnpm dev
+
+# Open http://localhost:5173 — login with id=1, pin=123456
 ```
-07:00 🌅 Morning briefing + today's plan
-  ↓
-anytime 💬 Q&A (photo or text)
-  ↓
-18:00 📝 Error review + variant practice
-  ↓
-21:30 📊 Daily report + mood check-in
-```
 
-The homeroom agent stays in the conversation; subject and mood agents are called as workers and return control afterward — so the student feels like they're talking to one coherent companion, not switching between bots.
+---
 
 ## Tech Stack
 
 | Layer | Choice |
 |-------|--------|
-| Language | Python 3.11+ |
-| Web framework | FastAPI (HTTP + SSE streaming) |
-| ORM / DB | SQLAlchemy + SQLite (MVP) → Postgres |
+| Backend | Python 3.11+ · FastAPI · SQLAlchemy · Alembic |
+| Frontend | Vue 3 · Vite · Pinia · TypeScript |
+| LLM | Claude Sonnet 4.6 (main) · Claude Haiku 4.5 (router) |
+| Embeddings | all-MiniLM-L6-v2 (384-dim, numpy) |
+| DB | SQLite (dev) → Postgres (prod) |
 | Scheduling | APScheduler (separate process) |
-| LLM (configurable) | Claude Sonnet 4.6 (main) + Haiku 4.5 (router) |
-| Vision (replaces OCR) | Commercial multimodal LLM API |
-| Frontend | Tablet web page (existing hardware) |
+| Auth | bcrypt PIN + DB-backed tokens with TTL |
 
-## Design Document
+---
 
-The full design is in [`docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md`](docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md) — 12 sections covering architecture, agent roles, data model, scenario flows, error handling, testing strategy, and 24 locked design decisions.
+## Architecture
 
-## Roadmap
+```
+POST /message/send
+  ├─ red_line scan → escalate? → crisis response (no LLM)
+  ├─ create streaming placeholder → 202 ack
+  └─ background task (own DB session)
+       ├─ RouterLLM (Haiku): intent → agent choice
+       ├─ AgentLoop.run_streaming (tools ↔ LLM)
+       │    ├─ homeroom: plan, profile, errors, memory
+       │    ├─ subject_teacher: skills, vision, variants
+       │    └─ mood_companion: log_mood, return_to_homeroom
+       ├─ SSE deltas → EventBus → GET /events/stream
+       ├─ LLMUsage telemetry
+       └─ memory summarizer (every N turns)
+```
 
-5-week MVP across 4 stages:
+Tests: `tests/{unit,integration,api,e2e}/` · `pytest` (81 tests) · `pnpm test` (vitest, 66 tests)
 
-| Stage | Duration | Goal |
-|-------|----------|------|
-| 1 · Skeleton | ~1 week | Fork base, DB schema, single-agent loop, FastAPI + SSE |
-| 2 · 3-Agent Orchestration | ~1.5 weeks | Router LLM, three prompts, Q&A scenario end-to-end |
-| 3 · Active Companion + Error Loop | ~1.5 weeks | Scheduler, four daily scenarios, vision input, mastery tracking |
-| 4 · Mood Companion + Polish | ~1 week | Mood agent, red-line detection, six subjects, E2E tests |
+---
 
-V1.1+ candidates: weekly reports, parent dashboard, semantic memory retrieval, expanded question bank, offline mode.
+## Development
 
-## Status
+```bash
+# Backend
+pytest                              # all tests
+pytest tests/unit/test_memory.py    # single file
+alembic revision --autogenerate -m "description"
 
-🚧 Design phase complete. Implementation planning in progress.
+# Frontend
+cd src/pacer/web-next
+pnpm dev          # dev server (port 5173)
+pnpm build        # production build
+pnpm test         # vitest
+pnpm typecheck    # vue-tsc --noEmit
+
+# Seed data
+python scripts/seed_dev_student.py        # student id=1, pin=123456
+python scripts/seed_knowledge_points.py   # ~200 Gaokao knowledge points
+```
+
+Full design doc: [`docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md`](docs/superpowers/specs/2026-05-18-ai-edu-companion-design.md)
+
+---
 
 ## License
 
