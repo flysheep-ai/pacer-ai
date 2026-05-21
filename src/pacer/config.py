@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(5, alias="PACER_LOGIN_MAX_ATTEMPTS")
     login_lockout_seconds: int = Field(300, alias="PACER_LOGIN_LOCKOUT_SECONDS")
     memory_summarize_interval: int = Field(3, alias="PACER_MEMORY_SUMMARIZE_INTERVAL")
+    handoff_enabled: bool = Field(False, alias="PACER_HANDOFF_ENABLED")
 
 
 def get_settings() -> Settings:

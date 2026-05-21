@@ -12,8 +12,11 @@ from pacer.agents.subject_teacher import build_subject_teacher_agent
 from pacer.agents.mood_companion import build_mood_agent
 from pacer.memory.persistent import PersistentMemory
 from pacer.agent.loop import AgentLoop, AgentResult
+from pacer.config import get_settings
 
 log = logging.getLogger("pacer.orchestrator")
+
+_HANDOFF_DELIMITER = "\n\n---\n"
 
 
 @dataclass
@@ -23,6 +26,7 @@ class OrchestratedResult:
     subject: str | None
     route: RouteDecision
     inner: AgentResult
+    trace: list[dict[str, Any]] | None = None  # combined trace when handoff occurred
 
 
 class Orchestrator:
@@ -65,6 +69,12 @@ class Orchestrator:
             return user_message
         return " ".join(b.get("text", "") for b in user_message if b.get("type") == "text")
 
+    @staticmethod
+    def _called_return_to_homeroom(trace: list[dict[str, Any]]) -> bool:
+        return any(
+            step.get("tool") == "return_to_homeroom" for step in trace
+        )
+
     async def handle(
         self, user_message: str | list[dict[str, Any]], history: list[LLMMessage],
     ) -> OrchestratedResult:
@@ -73,9 +83,34 @@ class Orchestrator:
         agent, agent_used = self._build_agent(route)
         recalled = self._recall_memories(text)
         result = await agent.run(user_message, history=history, recalled_memory_block=recalled)
+
+        # Hand-back: if sub-agent asked to return to homeroom, run a wrap-up.
+        combined_trace = list(result.trace)
+        if (
+            get_settings().handoff_enabled
+            and agent_used in ("subject_teacher", "mood_companion")
+            and self._called_return_to_homeroom(result.trace)
+        ):
+            homeroom = build_homeroom_agent(
+                llm=self.llm, session_factory=self.session_factory,
+                student_id=self.student_id, max_iterations=2,
+            )
+            wrap_prompt = (
+                f"学科老师/心态师已完成任务，以下是他的回复：\n{result.final_text}\n\n"
+                f"请用 1-2 句简短的话做总结或过渡，回到班主任角色继续对话。"
+            )
+            wrap = await homeroom.run(wrap_prompt, history=[], recalled_memory_block=None)
+            combined_trace.extend(wrap.trace)
+            return OrchestratedResult(
+                final_text=result.final_text + _HANDOFF_DELIMITER + wrap.final_text,
+                agent_used=agent_used, subject=route.subject, route=route,
+                inner=wrap, trace=combined_trace,
+            )
+
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
+            trace=combined_trace,
         )
 
     async def handle_streaming(
@@ -89,9 +124,36 @@ class Orchestrator:
         result = await agent.run_streaming(
             user_message, history=history, on_delta=on_delta, recalled_memory_block=recalled,
         )
+
+        # Hand-back: if sub-agent asked to return to homeroom, run homeroom wrap-up.
+        combined_trace = list(result.trace)
+        if (
+            get_settings().handoff_enabled
+            and agent_used in ("subject_teacher", "mood_companion")
+            and self._called_return_to_homeroom(result.trace)
+        ):
+            homeroom = build_homeroom_agent(
+                llm=self.llm, session_factory=self.session_factory,
+                student_id=self.student_id, max_iterations=2,
+            )
+            wrap_prompt = (
+                f"学科老师/心态师已完成任务，以下是他的回复：\n{result.final_text}\n\n"
+                f"请用 1-2 句简短的话做总结或过渡，回到班主任角色继续对话。"
+            )
+            wrap = await homeroom.run(wrap_prompt, history=[], recalled_memory_block=None)
+            combined_trace.extend(wrap.trace)
+            if wrap.final_text:
+                await on_delta(_HANDOFF_DELIMITER + wrap.final_text)
+            final_text = result.final_text + _HANDOFF_DELIMITER + wrap.final_text
+            return OrchestratedResult(
+                final_text=final_text, agent_used=agent_used,
+                subject=route.subject, route=route, inner=wrap, trace=combined_trace,
+            )
+
         return OrchestratedResult(
             final_text=result.final_text, agent_used=agent_used,
             subject=route.subject, route=route, inner=result,
+            trace=combined_trace,
         )
 
     def _recall_memories(self, query: str) -> str | None:
