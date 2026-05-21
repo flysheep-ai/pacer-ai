@@ -1,10 +1,12 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from pacer.api.deps import get_db, current_student_id
+from pacer.api.streaming import start_assistant_stream
 from pacer.db.models import ErrorRecord, Plan, StudentMastery, KnowledgePoint
+from pacer.session.store import SessionStore
 
 router = APIRouter(tags=["resources"])
 
@@ -121,3 +123,41 @@ def get_mastery(db: Session = Depends(get_db), student_id: int = Depends(current
             "wrong_count": m.wrong_count,
         })
     return result
+
+
+@router.post("/errors/{error_id}/start-review", status_code=202)
+async def start_error_review(
+    error_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    student_id: int = Depends(current_student_id),
+):
+    e = db.query(ErrorRecord).filter_by(id=error_id, student_id=student_id).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="error not found")
+    stem = e.question.stem if e.question else "(题干缺失)"
+    seed_text = (
+        f"[复盘错题 #{e.id}] "
+        f"题目: {stem}\n"
+        f"我的答案: {e.user_answer or '(空)'}\n"
+        f"正确答案: {e.correct_answer or '(未给)'}"
+    )
+
+    store = SessionStore(db)
+    chat = store.create_session(student_id=student_id)
+    store.append_message(
+        chat.id, role="user", agent=None, content=seed_text,
+        metadata={"error_review_id": e.id},
+    )
+    assistant_msg = store.create_empty_assistant(chat.id, agent="subject_teacher")
+
+    start_assistant_stream(
+        app_state=request.app.state,
+        student_id=student_id,
+        session_id=chat.id,
+        assistant_message_id=assistant_msg.id,
+        user_message_for_llm=seed_text,
+        user_text_for_memory=seed_text,
+        history=[],
+    )
+    return {"session_id": chat.id, "assistant_message_id": assistant_msg.id}
