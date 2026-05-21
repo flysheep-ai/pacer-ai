@@ -43,7 +43,8 @@ class CreatePlanTool(StudentScopedTool):
         # Stamp every task with a stable id + explicit done flag so the
         # frontend can toggle individual rows. Caller-supplied id/done win.
         decorated = [
-            {**t, "id": t.get("id") or str(uuid.uuid4()), "done": bool(t.get("done", False))}
+            ({**t, "id": t.get("id") or str(uuid.uuid4()), "done": bool(t.get("done", False))}
+             if isinstance(t, dict) else t)
             for t in tasks
         ]
         plan = Plan(

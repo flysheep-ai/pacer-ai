@@ -41,3 +41,16 @@ async def test_create_plan_preserves_caller_supplied_id(student_session):
         {"id": "fixed-id-1234", "subject": "math"},
     ])
     assert out["tasks"][0]["id"] == "fixed-id-1234"
+
+
+@pytest.mark.asyncio
+async def test_create_plan_passes_through_non_dict_entries(student_session):
+    engine = student_session
+    tool = CreatePlanTool(session_factory=lambda: Session(engine), student_id=1)
+    out = await tool.execute(type="daily", tasks=[
+        "bare-string-task",
+        {"subject": "math"},
+    ])
+    assert out["tasks"][0] == "bare-string-task"
+    assert isinstance(out["tasks"][1], dict)
+    assert "id" in out["tasks"][1]
