@@ -3,6 +3,13 @@
 Used by `POST /message/send` and any other endpoint that needs to push an
 assistant reply through the orchestrator and into the SSE event bus
 (e.g. `POST /errors/{id}/start-review`).
+
+Cancellation works at two levels:
+1. In-process: asyncio.Task.cancel() via the `_streaming_tasks` dict.
+   Fast, works within a single worker.
+2. Cross-worker: a `streaming_cancellation` DB row per message_id.
+   The stop endpoint sets `cancel_requested=True`; the stream loop polls
+   every `CANCEL_POLL_INTERVAL` deltas. Enables multi-worker deploys.
 """
 from __future__ import annotations
 import asyncio
@@ -18,14 +25,14 @@ from pacer.session.store import SessionStore
 
 log = logging.getLogger("pacer.streaming")
 
-# Single-process registry of cancellable streaming tasks.
-# Shared with `/message/{message_id}/stop`. Multi-worker deploys would need
-# this moved to a DB flag the loop polls per tick.
+# How many deltas between DB cancellation checks (keep low enough that
+# the user doesn't wait long, high enough that we don't hammer the DB).
+CANCEL_POLL_INTERVAL = 10
+
 _streaming_tasks: dict[int, asyncio.Task] = {}
 
 
 def get_streaming_tasks() -> dict[int, asyncio.Task]:
-    """Accessor so callers (notably the stop endpoint) share one dict."""
     return _streaming_tasks
 
 
@@ -48,6 +55,10 @@ def start_assistant_stream(
     """
     settings = get_settings()
     bus = app_state.event_bus
+    msg_id = assistant_message_id
+
+    # Write a cancellation row so cross-worker stops can reach this stream.
+    _init_cancellation(msg_id)
 
     async def run() -> None:
         collected: list[str] = []
@@ -61,36 +72,41 @@ def start_assistant_stream(
             student_id=student_id,
             skills_loader=app_state.skills_loader,
         )
+        delta_count = 0
         try:
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_start",
                 data={
                     "session_id": session_id,
-                    "message_id": assistant_message_id,
+                    "message_id": msg_id,
                     "agent": "homeroom",
                 },
             ))
 
             async def on_delta(text: str) -> None:
+                nonlocal delta_count
                 if not text:
                     return
                 collected.append(text)
-                local_store.append_content_to_message(assistant_message_id, text)
+                local_store.append_content_to_message(msg_id, text)
                 await bus.publish(SSEEvent(
                     student_id=student_id, event_type="assistant_delta",
-                    data={"message_id": assistant_message_id, "delta": text},
+                    data={"message_id": msg_id, "delta": text},
                 ))
+                delta_count += 1
+                if delta_count % CANCEL_POLL_INTERVAL == 0 and _is_cancelled(msg_id, db_session):
+                    raise asyncio.CancelledError("cancelled via DB flag")
 
             out = await orch.handle_streaming(
                 user_message_for_llm, history=history, on_delta=on_delta,
             )
             local_store.finalize_message(
-                assistant_message_id, content=out.final_text, status="done",
+                msg_id, content=out.final_text, status="done",
             )
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_done",
                 data={
-                    "message_id": assistant_message_id,
+                    "message_id": msg_id,
                     "agent": out.agent_used,
                     "stop_reason": "completed",
                 },
@@ -123,34 +139,94 @@ def start_assistant_stream(
                 log.exception("memory summarizer failed")
         except asyncio.CancelledError:
             local_store.finalize_message(
-                assistant_message_id, content="".join(collected), status="failed",
+                msg_id, content="".join(collected), status="failed",
             )
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_done",
                 data={
-                    "message_id": assistant_message_id, "agent": "homeroom",
+                    "message_id": msg_id, "agent": "homeroom",
                     "stop_reason": "user_stopped",
                 },
             ))
         except Exception:
-            log.exception("streaming failed message_id=%s", assistant_message_id)
+            log.exception("streaming failed message_id=%s", msg_id)
             local_store.finalize_message(
-                assistant_message_id, content="".join(collected), status="failed",
+                msg_id, content="".join(collected), status="failed",
             )
             await bus.publish(SSEEvent(
                 student_id=student_id, event_type="assistant_done",
                 data={
-                    "message_id": assistant_message_id, "agent": "homeroom",
+                    "message_id": msg_id, "agent": "homeroom",
                     "stop_reason": "error",
                 },
             ))
         finally:
             db_session.close()
-            _streaming_tasks.pop(assistant_message_id, None)
+            _streaming_tasks.pop(msg_id, None)
+            _delete_cancellation(msg_id)
 
     task = asyncio.create_task(run())
-    _streaming_tasks[assistant_message_id] = task
+    _streaming_tasks[msg_id] = task
     return task
+
+
+def request_cancellation(message_id: int) -> None:
+    """Set the DB cancellation flag so any worker running this stream exits.
+
+    Callers (notably the stop endpoint) should call this AND also
+    cancel the in-memory task if available.
+    """
+    db = deps._SessionLocal()
+    try:
+        from pacer.db.models import StreamingCancellation
+        row = db.get(StreamingCancellation, message_id)
+        if row is not None:
+            row.cancel_requested = True
+            db.commit()
+        else:
+            db.add(StreamingCancellation(message_id=message_id, cancel_requested=True))
+            db.commit()
+    except Exception:
+        log.exception("failed to request cancellation for message %s", message_id)
+    finally:
+        db.close()
+
+
+# -- internal helpers ---------------------------------------------------------
+
+def _init_cancellation(message_id: int) -> None:
+    db = deps._SessionLocal()
+    try:
+        from pacer.db.models import StreamingCancellation
+        db.merge(StreamingCancellation(message_id=message_id, cancel_requested=False))
+        db.commit()
+    except Exception:
+        log.debug("failed to init cancellation row for message %s", message_id)
+    finally:
+        db.close()
+
+
+def _is_cancelled(message_id: int, db_session) -> bool:
+    try:
+        from pacer.db.models import StreamingCancellation
+        row = db_session.get(StreamingCancellation, message_id)
+        return row is not None and row.cancel_requested
+    except Exception:
+        return False
+
+
+def _delete_cancellation(message_id: int) -> None:
+    db = deps._SessionLocal()
+    try:
+        from pacer.db.models import StreamingCancellation
+        row = db.get(StreamingCancellation, message_id)
+        if row is not None:
+            db.delete(row)
+            db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
 
 
 def _should_summarize(store: SessionStore, session_id: int, interval: int) -> bool:

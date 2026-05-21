@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pacer
+      POSTGRES_PASSWORD: pacer
+      POSTGRES_DB: pacer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pacer"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://pacer:pacer@postgres:5432/pacer
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - PACER_MAIN_MODEL=${PACER_MAIN_MODEL:-claude-sonnet-4-6}
+      - PACER_ROUTER_MODEL=${PACER_ROUTER_MODEL:-claude-haiku-4-5-20251001}
+      - PACER_INTERNAL_TOKEN=${PACER_INTERNAL_TOKEN:-dev-token-change-me}
+      - PACER_HOST=0.0.0.0
+      - PACER_PORT=8000
+      - PACER_CORS_ORIGINS=${PACER_CORS_ORIGINS:-http://localhost:5173}
+      - PACER_LOG_LEVEL=${PACER_LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_dev_student.py &&
+             python scripts/seed_knowledge_points.py &&
+             uvicorn pacer.api.server:create_app --factory --host 0.0.0.0 --port 8000"
+
+  scheduler:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://pacer:pacer@postgres:5432/pacer
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - PACER_MAIN_MODEL=${PACER_MAIN_MODEL:-claude-sonnet-4-6}
+      - PACER_ROUTER_MODEL=${PACER_ROUTER_MODEL:-claude-haiku-4-5-20251001}
+      - PACER_INTERNAL_TOKEN=${PACER_INTERNAL_TOKEN:-dev-token-change-me}
+      - PACER_HOST=backend
+      - PACER_PORT=8000
+    depends_on:
+      - backend
+    command: python -m pacer.scheduler.runner
+
+volumes:
+  pgdata:

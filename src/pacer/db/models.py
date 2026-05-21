@@ -175,3 +175,18 @@ class LLMUsage(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     iterations: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class StreamingCancellation(Base):
+    """Per-message cancellation flag for multi-worker streaming.
+
+    When a client calls POST /message/{id}/stop, this row's cancel_requested
+    flips to True. The stream loop (in api/streaming.py) polls this flag
+    every N deltas and exits cooperatively. Replaces the single-process
+    _streaming_tasks dict in multi-worker deployments.
+    """
+
+    __tablename__ = "streaming_cancellation"
+    message_id: Mapped[int] = mapped_column(primary_key=True)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from pacer.api import deps
-from pacer.api.streaming import get_streaming_tasks, start_assistant_stream
+from pacer.api.streaming import get_streaming_tasks, request_cancellation, start_assistant_stream
 from pacer.companion.red_line import (
     ESCALATION_RESPONSE, scan_keywords, should_escalate,
 )
@@ -107,7 +107,10 @@ async def stop_stream(
     message_id: int,
     student_id: int = Depends(deps.current_student_id),
 ):
+    # In-process cancellation (fast path for same worker)
     task = _streaming_tasks.get(message_id)
     if task is not None and not task.done():
         task.cancel()
+    # Cross-worker cancellation (slow path via DB flag)
+    request_cancellation(message_id)
     return None
