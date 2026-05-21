@@ -26,12 +26,15 @@ def backfill_task_ids(database_url: str | None = None) -> int:
             for t in tasks:
                 if not isinstance(t, dict):
                     continue
+                task_mutated = False
                 if "id" not in t:
                     t["id"] = str(uuid.uuid4())
-                    mutated = True
-                    fixed += 1
+                    task_mutated = True
                 if "done" not in t:
                     t["done"] = False
+                    task_mutated = True
+                if task_mutated:
+                    fixed += 1
                     mutated = True
             if mutated:
                 p.tasks_json = tasks

@@ -65,3 +65,24 @@ def test_backfill_skips_non_dict_entries(tmp_path):
         s.commit()
     n = backfill_task_ids(url)
     assert n == 1
+    with Session(engine) as s:
+        assert s.get(Plan, 1).tasks_json[0] == "bare string entry"
+
+
+def test_backfill_counts_done_only_backfills(tmp_path):
+    """Tasks that only need a `done` default still count toward the total."""
+    url, engine = _setup(tmp_path)
+    existing_id = str(uuid.uuid4())
+    with Session(engine) as s:
+        s.add(Student(id=1, name="A", grade=12, pin_hash="x"))
+        s.add(Plan(
+            id=1, student_id=1, type="daily",
+            date=datetime.now(timezone.utc),
+            tasks_json=[{"id": existing_id, "subject": "math"}],  # has id, no done
+            generated_by="homeroom",
+        ))
+        s.commit()
+    n = backfill_task_ids(url)
+    assert n == 1
+    with Session(engine) as s:
+        assert s.get(Plan, 1).tasks_json[0]["done"] is False
