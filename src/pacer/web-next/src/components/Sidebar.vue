@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -12,11 +13,17 @@ const session = useSessionStore()
 const chat = useChatStore()
 const router = useRouter()
 
-const presets: { text: string; label: string }[] = [
-  { text: '帮我制定今天的学习计划', label: t('nav.todayPlan') },
-  { text: '帮我复盘最近的错题', label: t('nav.errorReview') },
-  { text: '生成今天的学习日报', label: t('nav.dailyReport') },
-]
+const presetTexts = [
+  '帮我制定今天的学习计划',
+  '帮我复盘最近的错题',
+  '生成今天的学习日报',
+] as const
+
+const presetLabels = computed(() => ({
+  '帮我制定今天的学习计划': t('nav.todayPlan'),
+  '帮我复盘最近的错题': t('nav.errorReview'),
+  '生成今天的学习日报': t('nav.dailyReport'),
+}))
 
 function newChat(): void {
   session.reset()
@@ -60,13 +67,13 @@ async function deleteChat(sid: number): Promise<void> {
 
     <div class="section">{{ t('nav.shortcuts') }}</div>
     <button
-      v-for="p in presets"
-      :key="p.text"
+      v-for="pt in presetTexts"
+      :key="pt"
       class="row"
       type="button"
-      @click="preset(p)"
+      @click="preset({ text: pt })"
     >
-      {{ p.label }}
+      {{ presetLabels[pt] }}
     </button>
 
     <div class="section">{{ t('nav.pages') }}</div>
